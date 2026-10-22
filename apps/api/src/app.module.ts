@@ -9,13 +9,14 @@ import { FeedModule } from './feed/feed.module';
 import { UsersModule } from './users/users.module';
 import { RecruitmentModule } from './recruitment/recruitment.module';
 import { AnalyticsModule } from './analytics/analytics.module';
+import { NotificationsModule } from './notifications/notifications.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     PrismaModule, AuthModule, OrganizationsModule, EventsModule,
     OpportunitiesModule, FeedModule, UsersModule, RecruitmentModule,
-    AnalyticsModule,
+    AnalyticsModule, NotificationsModule,
   ],
 })
 export class AppModule {}

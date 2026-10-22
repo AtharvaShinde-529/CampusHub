@@ -51,6 +51,7 @@ model User {
   applications       Application[]
   registrations      EventRegistration[]
   auditLogs          AuditLog[]
+  notifications      Notification[]
   facultyGuardianFor Organization[] @relation("FacultyGuardian")
 }
 
@@ -177,3 +178,13 @@ model AuditLog {
   user      User     @relation(fields: [userId], references: [id])
 }
 
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  title     String
+  message   String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+}
