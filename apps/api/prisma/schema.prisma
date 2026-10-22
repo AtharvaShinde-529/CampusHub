@@ -7,19 +7,10 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum GlobalRole {
-  STUDENT
-  FACULTY
-  ADMIN
-  CENTRAL_BODY
-}
-
-enum AccountStatus {
-  PENDING
-  ACTIVE
-  SUSPENDED
-  ARCHIVED
-}
+enum GlobalRole { STUDENT FACULTY ADMIN CENTRAL_BODY }
+enum AccountStatus { PENDING ACTIVE SUSPENDED ARCHIVED }
+enum OrgStatus { DRAFT PENDING_REVIEW ACTIVE SUSPENDED ARCHIVED }
+enum OrgRole { MEMBER COMMITTEE_MEMBER CLUB_HEAD FACULTY_GUARDIAN }
 
 model User {
   id            String        @id @default(uuid())
@@ -29,12 +20,14 @@ model User {
   status        AccountStatus @default(PENDING)
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
-  studentProfile StudentProfile?
-  facultyProfile FacultyProfile?
-  memberships    Membership[]
-  applications   Application[]
-  registrations  EventRegistration[]
-  auditLogs      AuditLog[]
+
+  studentProfile     StudentProfile?
+  facultyProfile     FacultyProfile?
+  memberships        Membership[]
+  applications       Application[]
+  registrations      EventRegistration[]
+  auditLogs          AuditLog[]
+  facultyGuardianFor Organization[] @relation("FacultyGuardian")
 }
 
 model StudentProfile {
@@ -44,45 +37,39 @@ model StudentProfile {
   lastName     String
   rollNumber   String   @unique
   department   String
-  interests    String[] 
+  interests    String[]
   skills       String[]
+  bio          String?
+  projects     String[]
   user         User     @relation(fields: [userId], references: [id])
 }
 
 model FacultyProfile {
-  id           String   @id @default(uuid())
-  userId       String   @unique
-  firstName    String
-  lastName     String
-  department   String
-  designation  String
-  user         User     @relation(fields: [userId], references: [id])
-}
-
-enum OrgStatus {
-  DRAFT
-  PENDING_REVIEW
-  ACTIVE
-  SUSPENDED
-  ARCHIVED
-}
-
-enum OrgRole {
-  MEMBER
-  COMMITTEE_MEMBER
-  CLUB_HEAD
-  FACULTY_GUARDIAN
+  id                    String   @id @default(uuid())
+  userId                String   @unique
+  firstName             String
+  lastName              String
+  department            String
+  designation           String
+  bio                   String?
+  user                  User     @relation(fields: [userId], references: [id])
+  assignedOrganizations Organization[] @relation("FacultyGuardian")
 }
 
 model Organization {
-  id          String    @id @default(uuid())
-  name        String    @unique
-  description String
-  category    String
-  status      OrgStatus @default(DRAFT)
-  createdAt   DateTime  @default(now())
-  memberships Membership[]
-  events      Event[]
+  id                String    @id @default(uuid())
+  name              String    @unique
+  description       String
+  category          String
+  status            OrgStatus @default(DRAFT)
+  createdAt         DateTime  @default(now())
+  
+  facultyGuardianId String?
+  facultyGuardian   User?     @relation("FacultyGuardian", fields: [facultyGuardianId], references: [id])
+
+  memberships       Membership[]
+  events            Event[]
+  recruitmentCycles RecruitmentCycle[]
 }
 
 model Membership {
@@ -92,9 +79,34 @@ model Membership {
   role           OrgRole  @default(MEMBER)
   isActive       Boolean  @default(true)
   createdAt      DateTime @default(now())
+
   user         User         @relation(fields: [userId], references: [id])
   organization Organization @relation(fields: [organizationId], references: [id])
+
   @@unique([userId, organizationId])
+}
+
+model RecruitmentCycle {
+  id             String        @id @default(uuid())
+  title          String
+  description    String
+  deadline       DateTime
+  status         String        @default("OPEN")
+  organizationId String
+  organization   Organization  @relation(fields: [organizationId], references: [id])
+  applications   Application[]
+  createdAt      DateTime      @default(now())
+}
+
+model Application {
+  id                 String           @id @default(uuid())
+  userId             String
+  recruitmentCycleId String
+  pitch              String
+  status             String           @default("PENDING")
+  
+  user               User             @relation(fields: [userId], references: [id])
+  recruitmentCycle   RecruitmentCycle @relation(fields: [recruitmentCycleId], references: [id])
 }
 
 model Event {
@@ -121,23 +133,6 @@ model EventRegistration {
   @@unique([userId, eventId])
 }
 
-model Application {
-  id           String   @id @default(uuid())
-  userId       String
-  status       String   @default("SUBMITTED")
-  user         User     @relation(fields: [userId], references: [id])
-}
-
-model AuditLog {
-  id        String   @id @default(uuid())
-  userId    String
-  action    String   
-  targetId  String?
-  details   String?
-  createdAt DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id])
-}
-
 model Opportunity {
   id          String   @id @default(uuid())
   title       String
@@ -147,4 +142,14 @@ model Opportunity {
   status      String   @default("PENDING_MODERATION")
   publisherId String
   createdAt   DateTime @default(now())
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String
+  action    String
+  targetId  String?
+  details   String?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
 }
