@@ -7,6 +7,7 @@ import Events from './pages/Events';
 import Opportunities from './pages/Opportunities';
 import Profile from './pages/Profile';
 import Recruitment from './pages/Recruitment';
+import AdminApprovals from './pages/AdminApprovals';
 
 function App() {
   return (
@@ -20,6 +21,7 @@ function App() {
         <Route path="/opportunities" element={<Opportunities />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/recruitment" element={<Recruitment />} />
+        <Route path="/admin/approvals" element={<AdminApprovals />} />
       </Routes>
     </BrowserRouter>
   );
