@@ -1,0 +1,150 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum GlobalRole {
+  STUDENT
+  FACULTY
+  ADMIN
+  CENTRAL_BODY
+}
+
+enum AccountStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+  ARCHIVED
+}
+
+model User {
+  id            String        @id @default(uuid())
+  email         String        @unique
+  passwordHash  String
+  globalRole    GlobalRole
+  status        AccountStatus @default(PENDING)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  studentProfile StudentProfile?
+  facultyProfile FacultyProfile?
+  memberships    Membership[]
+  applications   Application[]
+  registrations  EventRegistration[]
+  auditLogs      AuditLog[]
+}
+
+model StudentProfile {
+  id           String   @id @default(uuid())
+  userId       String   @unique
+  firstName    String
+  lastName     String
+  rollNumber   String   @unique
+  department   String
+  interests    String[] 
+  skills       String[]
+  user         User     @relation(fields: [userId], references: [id])
+}
+
+model FacultyProfile {
+  id           String   @id @default(uuid())
+  userId       String   @unique
+  firstName    String
+  lastName     String
+  department   String
+  designation  String
+  user         User     @relation(fields: [userId], references: [id])
+}
+
+enum OrgStatus {
+  DRAFT
+  PENDING_REVIEW
+  ACTIVE
+  SUSPENDED
+  ARCHIVED
+}
+
+enum OrgRole {
+  MEMBER
+  COMMITTEE_MEMBER
+  CLUB_HEAD
+  FACULTY_GUARDIAN
+}
+
+model Organization {
+  id          String    @id @default(uuid())
+  name        String    @unique
+  description String
+  category    String
+  status      OrgStatus @default(DRAFT)
+  createdAt   DateTime  @default(now())
+  memberships Membership[]
+  events      Event[]
+}
+
+model Membership {
+  id             String   @id @default(uuid())
+  userId         String
+  organizationId String
+  role           OrgRole  @default(MEMBER)
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  user         User         @relation(fields: [userId], references: [id])
+  organization Organization @relation(fields: [organizationId], references: [id])
+  @@unique([userId, organizationId])
+}
+
+model Event {
+  id             String   @id @default(uuid())
+  title          String
+  description    String
+  startDate      DateTime
+  endDate        DateTime
+  organizationId String
+  status         String   @default("DRAFT")
+  isFest         Boolean  @default(false)
+  parentEventId  String?  
+  organization   Organization      @relation(fields: [organizationId], references: [id])
+  registrations  EventRegistration[]
+}
+
+model EventRegistration {
+  id        String   @id @default(uuid())
+  userId    String
+  eventId   String
+  status    String   @default("REGISTERED")
+  user      User     @relation(fields: [userId], references: [id])
+  event     Event    @relation(fields: [eventId], references: [id])
+  @@unique([userId, eventId])
+}
+
+model Application {
+  id           String   @id @default(uuid())
+  userId       String
+  status       String   @default("SUBMITTED")
+  user         User     @relation(fields: [userId], references: [id])
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String
+  action    String   
+  targetId  String?
+  details   String?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model Opportunity {
+  id          String   @id @default(uuid())
+  title       String
+  description String
+  category    String
+  deadline    DateTime
+  status      String   @default("PENDING_MODERATION")
+  publisherId String
+  createdAt   DateTime @default(now())
+}
