@@ -15,21 +15,14 @@ export class EventsService {
   }
 
   async create(dto: CreateEventDto, userId: string) {
-    // 1. Check if the user is a CLUB_HEAD for this specific organization
     const membership = await this.prisma.membership.findUnique({
-      where: {
-        userId_organizationId: {
-          userId,
-          organizationId: dto.organizationId,
-        },
-      },
+      where: { userId_organizationId: { userId, organizationId: dto.organizationId } },
     });
 
     if (!membership || (membership.role !== 'CLUB_HEAD' && membership.role !== 'COMMITTEE_MEMBER')) {
-      throw new ForbiddenException('Only Club Heads or Committee Members can create events for this organization');
+      throw new ForbiddenException('Only Club Heads or Committee Members can create events');
     }
 
-    // 2. Create the event
     return this.prisma.event.create({
       data: {
         title: dto.title,
@@ -38,28 +31,20 @@ export class EventsService {
         endDate: new Date(dto.endDate),
         organizationId: dto.organizationId,
         status: 'PUBLISHED',
+        isFest: dto.isFest || false,
+        parentEventId: dto.parentEventId || null,
       },
     });
   }
 
   async register(eventId: string, userId: string) {
     const existing = await this.prisma.eventRegistration.findUnique({
-      where: {
-        userId_eventId: {
-          userId,
-          eventId,
-        },
-      },
+      where: { userId_eventId: { userId, eventId } },
     });
-
-    if (existing) throw new ConflictException('You are already registered for this event');
+    if (existing) throw new ConflictException('Already registered');
 
     return this.prisma.eventRegistration.create({
-      data: {
-        userId,
-        eventId,
-        status: 'REGISTERED',
-      },
+      data: { userId, eventId, status: 'REGISTERED' },
     });
   }
 

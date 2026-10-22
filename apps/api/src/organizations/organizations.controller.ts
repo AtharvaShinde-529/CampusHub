@@ -4,10 +4,11 @@ import { CreateOrganizationDto } from './dto/create-organization.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
+import { PrismaService } from '../prisma/prisma.service';
 
 @Controller('organizations')
 export class OrganizationsController {
-  constructor(private readonly organizationsService: OrganizationsService) {}
+  constructor(private readonly organizationsService: OrganizationsService, private prisma: PrismaService) {}
 
   @Get()
   findAll() { return this.organizationsService.findAll(); }
@@ -45,5 +46,33 @@ export class OrganizationsController {
   @Get('guarded')
   getGuardedOrgs(@Req() req: any) {
     return this.organizationsService.findGuardedOrgs(req.user.userId);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @Patch(':id/guardian')
+  async assignGuardian(@Param('id') id: string, @Body('facultyId') facultyId: string) {
+    return this.prisma.organization.update({
+      where: { id },
+      data: { facultyGuardianId: facultyId },
+    });
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get(':id/members')
+  async getMembers(@Param('id') id: string) {
+    return this.prisma.membership.findMany({
+      where: { organizationId: id, isActive: true },
+      include: { user: { include: { studentProfile: true, facultyProfile: true } } }
+    });
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch('members/:memberId')
+  async updateMemberRole(@Param('memberId') memberId: string, @Body('role') role: any) {
+    return this.prisma.membership.update({
+      where: { id: memberId },
+      data: { role: role }
+    });
   }
 }

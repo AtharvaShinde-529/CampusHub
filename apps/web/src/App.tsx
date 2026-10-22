@@ -8,6 +8,7 @@ import Opportunities from './pages/Opportunities';
 import Profile from './pages/Profile';
 import Recruitment from './pages/Recruitment';
 import AdminApprovals from './pages/AdminApprovals';
+import ClubManagement from './pages/ClubManagement';
 
 function App() {
   return (
@@ -17,6 +18,7 @@ function App() {
         <Route path="/register" element={<Register />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/organizations" element={<Organizations />} />
+        <Route path="/organizations/:id/manage" element={<ClubManagement />} />
         <Route path="/events" element={<Events />} />
         <Route path="/opportunities" element={<Opportunities />} />
         <Route path="/profile" element={<Profile />} />
@@ -26,5 +28,4 @@ function App() {
     </BrowserRouter>
   );
 }
-
 export default App;
