@@ -22,41 +22,72 @@ export default function Recruitment() {
   }, []);
 
   const fetchCycles = async () => {
-    const res = await api.get('/recruitment');
-    setCycles(res.data);
+    try {
+      const res = await api.get('/recruitment');
+      setCycles(res.data);
+    } catch (err) {
+      console.error(err);
+    }
   };
   
   const fetchMyClubs = async () => {
-    const res = await api.get('/organizations/my');
-    const heads = res.data.filter((m: any) => m.role === 'CLUB_HEAD');
-    setMyClubs(heads);
-    if (heads.length > 0) setOrgId(heads[0].organization.id);
+    try {
+      const res = await api.get('/organizations/my');
+      // Allow both CLUB_HEAD and COMMITTEE_MEMBER to post notices
+      const heads = res.data.filter((m: any) => m.role === 'CLUB_HEAD' || m.role === 'COMMITTEE_MEMBER');
+      setMyClubs(heads);
+      if (heads.length > 0) setOrgId(heads[0].organization.id);
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    await api.post('/recruitment', { title, description, deadline, organizationId: orgId });
-    setTitle(''); setDescription('');
-    fetchCycles();
+    if (!orgId) return alert('Please select an organization');
+    
+    try {
+      await api.post('/recruitment', { title, description, deadline, organizationId: orgId });
+      alert('Recruitment notice published successfully!');
+      setTitle(''); 
+      setDescription(''); 
+      setDeadline('');
+      fetchCycles();
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Failed to publish notice');
+      console.error(err);
+    }
   };
 
   const handleApply = async (id: string) => {
     const pitch = prompt('Why do you want to join? (Short pitch)');
     if (pitch) {
-      await api.post(`/recruitment/${id}/apply`, { pitch });
-      alert('Applied successfully!');
+      try {
+        await api.post(`/recruitment/${id}/apply`, { pitch });
+        alert('Applied successfully!');
+      } catch (err: any) {
+        alert(err.response?.data?.message || 'Failed to apply');
+      }
     }
   };
 
   const loadApplicants = async (id: string) => {
-    const res = await api.get(`/recruitment/${id}/applications`);
-    setApplicants(res.data);
-    setViewApplicants(id);
+    try {
+      const res = await api.get(`/recruitment/${id}/applications`);
+      setApplicants(res.data);
+      setViewApplicants(id);
+    } catch (err) {
+      alert('Failed to load applicants');
+    }
   };
 
   const updateStatus = async (appId: string, status: string) => {
-    await api.patch(`/recruitment/applications/${appId}`, { status });
-    loadApplicants(viewApplicants!);
+    try {
+      await api.patch(`/recruitment/applications/${appId}`, { status });
+      loadApplicants(viewApplicants!);
+    } catch (err) {
+      alert('Failed to update status');
+    }
   };
 
   return (
@@ -73,7 +104,10 @@ export default function Recruitment() {
             <form onSubmit={handleCreate} className="space-y-4">
               <input type="text" placeholder="Title (e.g. Core Team Recruitment)" required className="w-full p-2 border rounded" value={title} onChange={e => setTitle(e.target.value)} />
               <textarea placeholder="Description / Requirements" required className="w-full p-2 border rounded" value={description} onChange={e => setDescription(e.target.value)} />
-              <input type="datetime-local" required className="w-full p-2 border rounded" value={deadline} onChange={e => setDeadline(e.target.value)} />
+              <div>
+                <label className="text-xs text-gray-500">Deadline Date & Time</label>
+                <input type="datetime-local" required className="w-full p-2 border rounded" value={deadline} onChange={e => setDeadline(e.target.value)} />
+              </div>
               <select className="w-full p-2 border rounded" value={orgId} onChange={e => setOrgId(e.target.value)}>
                 {myClubs.map(c => <option key={c.organization.id} value={c.organization.id}>{c.organization.name}</option>)}
               </select>
@@ -94,12 +128,12 @@ export default function Recruitment() {
                   <p className="text-xs text-red-500 font-bold mt-2">Deadline: {new Date(cycle.deadline).toLocaleString()}</p>
                 </div>
                 <div className="flex flex-col gap-2">
-                  <button onClick={() => handleApply(cycle.id)} className="bg-blue-600 text-white px-4 py-2 rounded text-sm">Apply</button>
-                  {/* Only show to club head of this org (mocked check for UI) */}
-                  <button onClick={() => loadApplicants(cycle.id)} className="bg-gray-800 text-white px-4 py-2 rounded text-sm">View Applicants</button>
+                  <button onClick={() => handleApply(cycle.id)} className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700">Apply</button>
+                  <button onClick={() => loadApplicants(cycle.id)} className="bg-gray-800 text-white px-4 py-2 rounded text-sm hover:bg-gray-900">View Applicants</button>
                 </div>
               </div>
             ))}
+            {cycles.length === 0 && <p className="text-gray-500">No open recruitment cycles right now.</p>}
           </div>
         </div>
 
@@ -114,11 +148,11 @@ export default function Recruitment() {
                 <div>
                   <p className="font-bold">{app.user.studentProfile?.firstName} {app.user.studentProfile?.lastName}</p>
                   <p className="text-sm text-gray-600 italic">"{app.pitch}"</p>
-                  <p className="text-xs font-bold mt-1 text-{app.status === 'ACCEPTED' ? 'green' : app.status === 'REJECTED' ? 'red' : 'gray'}-600">{app.status}</p>
+                  <p className={`text-xs font-bold mt-1 ${app.status === 'ACCEPTED' ? 'text-green-600' : app.status === 'REJECTED' ? 'text-red-600' : 'text-gray-600'}`}>{app.status}</p>
                 </div>
                 <div className="flex gap-2">
-                  <button onClick={() => updateStatus(app.id, 'ACCEPTED')} className="bg-green-500 text-white px-3 py-1 rounded text-sm">Accept</button>
-                  <button onClick={() => updateStatus(app.id, 'REJECTED')} className="bg-red-500 text-white px-3 py-1 rounded text-sm">Reject</button>
+                  <button onClick={() => updateStatus(app.id, 'ACCEPTED')} className="bg-green-500 text-white px-3 py-1 rounded text-sm hover:bg-green-600">Accept</button>
+                  <button onClick={() => updateStatus(app.id, 'REJECTED')} className="bg-red-500 text-white px-3 py-1 rounded text-sm hover:bg-red-600">Reject</button>
                 </div>
               </div>
             ))}
