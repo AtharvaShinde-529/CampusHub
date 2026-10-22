@@ -52,6 +52,7 @@ model User {
   registrations      EventRegistration[]
   auditLogs          AuditLog[]
   notifications      Notification[]
+  exchangeItems      ExchangeItem[]
   facultyGuardianFor Organization[] @relation("FacultyGuardian")
 }
 
@@ -187,4 +188,15 @@ model Notification {
   isRead    Boolean  @default(false)
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id])
+}
+
+model ExchangeItem {
+  id          String   @id @default(uuid())
+  title       String
+  description String
+  type        String   // "LOST", "FOUND", "SELL", "EXCHANGE"
+  status      String   @default("OPEN") // "OPEN", "RESOLVED"
+  userId      String
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id])
 }

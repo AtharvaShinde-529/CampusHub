@@ -11,7 +11,6 @@ export default function Navbar() {
 
   useEffect(() => {
     fetchNotifications();
-    // Optional: poll every 30 seconds
     const interval = setInterval(fetchNotifications, 30000);
     return () => clearInterval(interval);
   }, []);
@@ -45,12 +44,12 @@ export default function Navbar() {
           <Link to="/recruitment" className="hover:text-blue-600">Recruitment</Link>
           <Link to="/events" className="hover:text-blue-600">Events</Link>
           <Link to="/opportunities" className="hover:text-blue-600">Opportunities</Link>
+          <Link to="/exchange" className="hover:text-blue-600">Exchange</Link>
           {user.role === 'ADMIN' && <Link to="/admin" className="text-red-600 font-bold hover:text-red-800">Admin Panel</Link>}
         </div>
       </div>
       
       <div className="flex items-center space-x-6">
-        {/* Notification Bell */}
         <div className="relative">
           <button onClick={() => setShowDropdown(!showDropdown)} className="relative p-2 text-gray-600 hover:bg-gray-100 rounded-full">
             <Bell size={20} />

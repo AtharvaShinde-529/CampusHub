@@ -11,6 +11,7 @@ import AdminApprovals from './pages/AdminApprovals';
 import ClubManagement from './pages/ClubManagement';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminUsers from './pages/AdminUsers';
+import Exchange from './pages/Exchange';
 
 function App() {
   return (
@@ -28,6 +29,7 @@ function App() {
         <Route path="/admin" element={<AdminDashboard />} />
         <Route path="/admin/approvals" element={<AdminApprovals />} />
         <Route path="/admin/users" element={<AdminUsers />} />
+        <Route path="/exchange" element={<Exchange />} />
       </Routes>
     </BrowserRouter>
   );
