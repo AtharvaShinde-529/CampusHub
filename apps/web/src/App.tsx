@@ -9,6 +9,7 @@ import Profile from './pages/Profile';
 import Recruitment from './pages/Recruitment';
 import AdminApprovals from './pages/AdminApprovals';
 import ClubManagement from './pages/ClubManagement';
+import AdminDashboard from './pages/AdminDashboard';
 
 function App() {
   return (
@@ -23,6 +24,7 @@ function App() {
         <Route path="/opportunities" element={<Opportunities />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/recruitment" element={<Recruitment />} />
+        <Route path="/admin" element={<AdminDashboard />} />
         <Route path="/admin/approvals" element={<AdminApprovals />} />
       </Routes>
     </BrowserRouter>

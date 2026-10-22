@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { api } from '../api/axios';
+import Navbar from '../components/Navbar';
 
 export default function Dashboard() {
   const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const [feed, setFeed] = useState<any>({ events: [], opportunities: [], clubs: [] });
+  const [myClubs, setMyClubs] = useState<any[]>([]);
   const [guardedClubs, setGuardedClubs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -16,8 +18,9 @@ export default function Dashboard() {
 
   const fetchData = async () => {
     try {
-      const [feedRes] = await Promise.all([api.get('/feed')]);
+      const [feedRes, myClubsRes] = await Promise.all([api.get('/feed'), api.get('/organizations/my')]);
       setFeed(feedRes.data);
+      setMyClubs(myClubsRes.data);
       
       if (user.role === 'FACULTY') {
         const guardedRes = await api.get('/organizations/guarded');
@@ -30,28 +33,28 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-gray-100 pb-12">
-      <nav className="bg-white shadow-sm px-8 py-4 flex justify-between items-center sticky top-0 z-10">
-        <div className="flex items-center space-x-6">
-          <h1 className="text-2xl font-extrabold text-blue-600 tracking-tight">CampusHub</h1>
-          <div className="hidden md:flex space-x-4 font-medium text-gray-600">
-            <Link to="/dashboard" className="text-blue-600">Feed</Link>
-            <Link to="/organizations" className="hover:text-blue-600">Clubs</Link>
-            <Link to="/recruitment" className="hover:text-blue-600">Recruitment</Link>
-            <Link to="/events" className="hover:text-blue-600">Events</Link>
-            <Link to="/opportunities" className="hover:text-blue-600">Opportunities</Link>
-            {user.role === 'ADMIN' && <Link to="/admin/approvals" className="text-red-600 font-bold hover:text-red-800">Approvals</Link>}
-          </div>
-        </div>
-        <div className="flex items-center space-x-4">
-          <Link to="/profile" className="text-sm font-semibold text-blue-600 hover:underline">My Profile</Link>
-          <button onClick={() => { localStorage.clear(); navigate('/'); }} className="text-sm font-semibold text-red-500 hover:text-red-700">Logout</button>
-        </div>
-      </nav>
-
+      <Navbar />
+      
       <div className="max-w-6xl mx-auto p-6 grid grid-cols-1 lg:grid-cols-3 gap-6 mt-4">
         
-        {/* Left Column: Feed */}
+        {/* Left Column: My Clubs & Feed */}
         <div className="lg:col-span-2 space-y-6">
+          <div className="bg-white p-6 rounded-xl shadow-sm">
+            <h2 className="text-xl font-bold mb-4">?? My Clubs</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {myClubs.map(c => (
+                <div key={c.id} className="border p-4 rounded-lg bg-gray-50">
+                  <h3 className="font-bold text-blue-700">{c.organization.name}</h3>
+                  <p className="text-sm text-gray-500 font-semibold mb-3">Role: {c.role}</p>
+                  {c.role === 'CLUB_HEAD' && (
+                    <Link to={`/organizations/${c.organization.id}/manage`} className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700">Manage Club</Link>
+                  )}
+                </div>
+              ))}
+              {myClubs.length === 0 && <p className="text-sm text-gray-500">You haven't joined any clubs yet.</p>}
+            </div>
+          </div>
+
           <div className="bg-white p-6 rounded-xl shadow-sm">
             <h2 className="text-xl font-bold mb-4">?? Upcoming Events</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
