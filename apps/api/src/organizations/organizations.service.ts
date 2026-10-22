@@ -6,9 +6,13 @@ import { CreateOrganizationDto } from './dto/create-organization.dto';
 export class OrganizationsService {
   constructor(private prisma: PrismaService) {}
 
-  async findAll() {
+  async findAll(search?: string, category?: string) {
     return this.prisma.organization.findMany({
-      where: { status: 'ACTIVE' },
+      where: { 
+        status: 'ACTIVE',
+        ...(search && { name: { contains: search, mode: 'insensitive' } }),
+        ...(category && { category: { equals: category, mode: 'insensitive' } }),
+      },
     });
   }
 
@@ -22,22 +26,14 @@ export class OrganizationsService {
   async create(dto: CreateOrganizationDto, userId: string) {
     return this.prisma.organization.create({
       data: {
-        name: dto.name,
-        description: dto.description,
-        category: dto.category,
-        status: 'PENDING_REVIEW', // Changed from ACTIVE to PENDING
-        memberships: {
-          create: { userId: userId, role: 'CLUB_HEAD' },
-        },
+        name: dto.name, description: dto.description, category: dto.category, status: 'PENDING_REVIEW',
+        memberships: { create: { userId: userId, role: 'CLUB_HEAD' } },
       },
     });
   }
 
   async approve(id: string) {
-    return this.prisma.organization.update({
-      where: { id },
-      data: { status: 'ACTIVE' },
-    });
+    return this.prisma.organization.update({ where: { id }, data: { status: 'ACTIVE' } });
   }
 
   async join(orgId: string, userId: string) {
@@ -45,16 +41,11 @@ export class OrganizationsService {
       where: { userId_organizationId: { userId, organizationId: orgId } },
     });
     if (existing) throw new ConflictException('Already a member');
-    return this.prisma.membership.create({
-      data: { userId, organizationId: orgId, role: 'MEMBER' },
-    });
+    return this.prisma.membership.create({ data: { userId, organizationId: orgId, role: 'MEMBER' } });
   }
 
   async findMyMemberships(userId: string) {
-    return this.prisma.membership.findMany({
-      where: { userId, isActive: true },
-      include: { organization: true },
-    });
+    return this.prisma.membership.findMany({ where: { userId, isActive: true }, include: { organization: true } });
   }
 
   async findGuardedOrgs(userId: string) {

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, UseGuards, Req, Patch } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, UseGuards, Req, Patch, Query } from '@nestjs/common';
 import { OrganizationsService } from './organizations.service';
 import { CreateOrganizationDto } from './dto/create-organization.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -11,7 +11,9 @@ export class OrganizationsController {
   constructor(private readonly organizationsService: OrganizationsService, private prisma: PrismaService) {}
 
   @Get()
-  findAll() { return this.organizationsService.findAll(); }
+  findAll(@Query('search') search?: string, @Query('category') category?: string) {
+    return this.organizationsService.findAll(search, category);
+  }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN')
@@ -53,8 +55,7 @@ export class OrganizationsController {
   @Patch(':id/guardian')
   async assignGuardian(@Param('id') id: string, @Body('facultyId') facultyId: string) {
     return this.prisma.organization.update({
-      where: { id },
-      data: { facultyGuardianId: facultyId },
+      where: { id }, data: { facultyGuardianId: facultyId },
     });
   }
 
@@ -70,9 +71,6 @@ export class OrganizationsController {
   @UseGuards(JwtAuthGuard)
   @Patch('members/:memberId')
   async updateMemberRole(@Param('memberId') memberId: string, @Body('role') role: any) {
-    return this.prisma.membership.update({
-      where: { id: memberId },
-      data: { role: role }
-    });
+    return this.prisma.membership.update({ where: { id: memberId }, data: { role: role } });
   }
 }

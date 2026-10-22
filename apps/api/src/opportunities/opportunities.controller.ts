@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, UseGuards, Req } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, UseGuards, Req, Query } from '@nestjs/common';
 import { OpportunitiesService } from './opportunities.service';
 import { CreateOpportunityDto } from './dto/create-opportunity.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -10,16 +10,14 @@ export class OpportunitiesController {
   constructor(private readonly opportunitiesService: OpportunitiesService) {}
 
   @Get()
-  findAll() {
-    return this.opportunitiesService.findApproved();
+  findAll(@Query('search') search?: string, @Query('category') category?: string) {
+    return this.opportunitiesService.findApproved(search, category);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN')
   @Get('pending')
-  findPending() {
-    return this.opportunitiesService.findPending();
-  }
+  findPending() { return this.opportunitiesService.findPending(); }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('FACULTY', 'ADMIN')
@@ -31,7 +29,5 @@ export class OpportunitiesController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN')
   @Patch(':id/approve')
-  approve(@Param('id') id: string) {
-    return this.opportunitiesService.approve(id);
-  }
+  approve(@Param('id') id: string) { return this.opportunitiesService.approve(id); }
 }

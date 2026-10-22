@@ -7,15 +7,23 @@ export default function Organizations() {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('');
+  const [search, setSearch] = useState('');
+  const [filterCategory, setFilterCategory] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const navigate = useNavigate();
 
-  useEffect(() => { fetchOrgs(); }, []);
+  useEffect(() => { 
+    fetchOrgs(); 
+  }, [search, filterCategory]);
 
   const fetchOrgs = async () => {
-    const res = await api.get('/organizations');
-    setOrgs(res.data);
+    try {
+      const res = await api.get('/organizations', { 
+        params: { search: search || undefined, category: filterCategory || undefined } 
+      });
+      setOrgs(res.data);
+    } catch (err) { console.error(err); }
   };
 
   const handleCreate = async (e: React.FormEvent) => {
@@ -34,12 +42,12 @@ export default function Organizations() {
     try {
       await api.post(`/organizations/${id}/join`);
       alert('Successfully joined the club!');
-    } catch (err: any) { alert('Failed to join'); }
+    } catch (err: any) { alert(err.response?.data?.message || 'Failed to join'); }
   };
 
   return (
     <div className="min-h-screen bg-gray-50 p-8">
-      <div className="max-w-4xl mx-auto space-y-8">
+      <div className="max-w-5xl mx-auto space-y-8">
         <div className="flex justify-between items-center bg-white p-6 rounded-lg shadow-md">
           <h1 className="text-3xl font-bold text-gray-800">Campus Organizations</h1>
           <button onClick={() => navigate('/dashboard')} className="bg-gray-200 px-4 py-2 rounded hover:bg-gray-300">Back to Feed</button>
@@ -51,14 +59,34 @@ export default function Organizations() {
           {success && <div className="bg-green-100 text-green-700 p-3 rounded mb-4">{success}</div>}
           <form onSubmit={handleCreate} className="space-y-4">
             <input type="text" placeholder="Organization Name" required className="w-full p-2 border rounded" value={name} onChange={e => setName(e.target.value)} />
-            <input type="text" placeholder="Category" required className="w-full p-2 border rounded" value={category} onChange={e => setCategory(e.target.value)} />
+            <select className="w-full p-2 border rounded" value={category} onChange={e => setCategory(e.target.value)}>
+              <option value="">Select Category</option>
+              <option value="Technical">Technical</option>
+              <option value="Cultural">Cultural</option>
+              <option value="Sports">Sports</option>
+              <option value="Speaking">Speaking</option>
+              <option value="Other">Other</option>
+            </select>
             <textarea placeholder="Description" required className="w-full p-2 border rounded" value={description} onChange={e => setDescription(e.target.value)} />
             <button type="submit" className="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700">Submit for Approval</button>
           </form>
         </div>
 
         <div className="bg-white p-6 rounded-lg shadow-md">
-          <h2 className="text-xl font-semibold mb-4">Registered Organizations</h2>
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-xl font-semibold">Registered Organizations</h2>
+            <div className="flex gap-2">
+              <input type="text" placeholder="Search by name..." className="p-2 border rounded" value={search} onChange={e => setSearch(e.target.value)} />
+              <select className="p-2 border rounded" value={filterCategory} onChange={e => setFilterCategory(e.target.value)}>
+                <option value="">All Categories</option>
+                <option value="Technical">Technical</option>
+                <option value="Cultural">Cultural</option>
+                <option value="Sports">Sports</option>
+                <option value="Speaking">Speaking</option>
+              </select>
+            </div>
+          </div>
+          
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {orgs.map(org => (
               <div key={org.id} className="border p-4 rounded shadow-sm bg-gray-50 flex flex-col justify-between">
@@ -70,7 +98,7 @@ export default function Organizations() {
                 <button onClick={() => handleJoin(org.id)} className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 self-start">Join Club</button>
               </div>
             ))}
-            {orgs.length === 0 && <p className="text-gray-500">No approved organizations yet.</p>}
+            {orgs.length === 0 && <p className="text-gray-500">No organizations found matching your criteria.</p>}
           </div>
         </div>
       </div>
