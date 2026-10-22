@@ -27,21 +27,14 @@ export class AuthService {
         ...(dto.role === 'STUDENT' ? {
           studentProfile: {
             create: {
-              firstName: dto.firstName,
-              lastName: dto.lastName,
-              rollNumber: dto.identifier,
-              department: 'General',
-              interests: [],
-              skills: []
+              firstName: dto.firstName, lastName: dto.lastName, rollNumber: dto.identifier,
+              department: 'General', interests: [], skills: []
             }
           }
         } : dto.role === 'FACULTY' ? {
           facultyProfile: {
             create: {
-              firstName: dto.firstName,
-              lastName: dto.lastName,
-              designation: dto.identifier,
-              department: 'General'
+              firstName: dto.firstName, lastName: dto.lastName, designation: dto.identifier, department: 'General'
             }
           }
         } : {})
@@ -49,15 +42,17 @@ export class AuthService {
       include: { studentProfile: true, facultyProfile: true }
     });
 
-    return {
-      message: 'User registered successfully',
-      user: { id: user.id, email: user.email, role: user.globalRole }
-    };
+    return { message: 'User registered successfully', user: { id: user.id, email: user.email, role: user.globalRole } };
   }
 
   async login(dto: LoginDto) {
     const user = await this.prisma.user.findUnique({ where: { email: dto.email } });
     if (!user) throw new UnauthorizedException('Invalid credentials');
+
+    // Check if user is suspended
+    if (user.status === 'SUSPENDED') {
+      throw new UnauthorizedException('Your account has been suspended. Please contact the administrator.');
+    }
 
     const isPasswordValid = await argon2.verify(user.passwordHash, dto.password);
     if (!isPasswordValid) throw new UnauthorizedException('Invalid credentials');

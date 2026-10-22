@@ -10,6 +10,7 @@ import Recruitment from './pages/Recruitment';
 import AdminApprovals from './pages/AdminApprovals';
 import ClubManagement from './pages/ClubManagement';
 import AdminDashboard from './pages/AdminDashboard';
+import AdminUsers from './pages/AdminUsers';
 
 function App() {
   return (
@@ -26,6 +27,7 @@ function App() {
         <Route path="/recruitment" element={<Recruitment />} />
         <Route path="/admin" element={<AdminDashboard />} />
         <Route path="/admin/approvals" element={<AdminApprovals />} />
+        <Route path="/admin/users" element={<AdminUsers />} />
       </Routes>
     </BrowserRouter>
   );

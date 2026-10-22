@@ -46,10 +46,14 @@ export default function AdminDashboard() {
         </div>
 
         <h2 className="text-2xl font-bold mb-4">Quick Actions</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <Link to="/admin/approvals" className="block p-6 bg-white border border-gray-200 rounded-xl hover:shadow-md transition">
-            <h3 className="text-xl font-bold text-gray-800 mb-2">Club Approvals & Faculty Assignment</h3>
+            <h3 className="text-xl font-bold text-gray-800 mb-2">Club Approvals</h3>
             <p className="text-gray-600">Review pending club registrations and assign mentors.</p>
+          </Link>
+          <Link to="/admin/users" className="block p-6 bg-white border border-gray-200 rounded-xl hover:shadow-md transition">
+            <h3 className="text-xl font-bold text-gray-800 mb-2">User Management</h3>
+            <p className="text-gray-600">Suspend or activate student and faculty accounts.</p>
           </Link>
           <Link to="/opportunities" className="block p-6 bg-white border border-gray-200 rounded-xl hover:shadow-md transition">
             <h3 className="text-xl font-bold text-gray-800 mb-2">Moderate Opportunities</h3>

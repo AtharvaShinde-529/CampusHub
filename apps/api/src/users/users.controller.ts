@@ -1,4 +1,4 @@
-import { Controller, Get, Put, Body, UseGuards, Req } from '@nestjs/common';
+import { Controller, Get, Put, Body, UseGuards, Req, Patch, Param, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
@@ -15,7 +15,7 @@ export class UsersController {
       where: { id: req.user.userId },
       include: { studentProfile: true, facultyProfile: true }
     });
-    if (!user) return null;
+    if (!user) throw new NotFoundException('User not found');
     const { passwordHash, ...result } = user;
     return result;
   }
@@ -43,6 +43,34 @@ export class UsersController {
     return this.prisma.user.findMany({
       where: { globalRole: 'FACULTY' },
       include: { facultyProfile: true }
+    });
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @Get('all')
+  async getAllUsers() {
+    return this.prisma.user.findMany({
+      select: {
+        id: true,
+        email: true,
+        globalRole: true,
+        status: true,
+        createdAt: true,
+        studentProfile: { select: { firstName: true, lastName: true } },
+        facultyProfile: { select: { firstName: true, lastName: true } }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @Patch(':id/status')
+  async updateUserStatus(@Param('id') id: string, @Body('status') status: 'ACTIVE' | 'SUSPENDED') {
+    return this.prisma.user.update({
+      where: { id },
+      data: { status }
     });
   }
 }
