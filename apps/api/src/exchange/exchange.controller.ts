@@ -19,7 +19,8 @@ export class ExchangeController {
 
   @UseGuards(JwtAuthGuard)
   @Patch(':id/status')
-  updateStatus(@Param('id') id: string, @Body('status') status: string) {
-    return this.exchangeService.updateStatus(id, status);
+  updateStatus(@Param('id') id: string, @Body('status') status: string, @Req() req: any) {
+    return this.exchangeService.updateStatus(id, status, req.user.userId);
   }
 }
+

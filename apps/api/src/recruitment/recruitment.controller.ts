@@ -1,14 +1,10 @@
-import { Controller, Get, Post, Body, Param, UseGuards, Req, Patch, ForbiddenException } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, UseGuards, Req, Patch, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { NotificationsService } from '../notifications/notifications.service';
 
 @Controller('recruitment')
 export class RecruitmentController {
-  constructor(
-    private prisma: PrismaService,
-    private notifications: NotificationsService
-  ) {}
+  constructor(private prisma: PrismaService) {}
 
   @Get()
   getOpenCycles() {
@@ -36,17 +32,28 @@ export class RecruitmentController {
   @UseGuards(JwtAuthGuard)
   @Post(':id/apply')
   async apply(@Param('id') id: string, @Req() req: any, @Body('pitch') pitch: string) {
-    const application = await this.prisma.application.create({
+    if (req.user.role !== 'STUDENT') {
+      throw new ForbiddenException('Only students can apply for club recruitment.');
+    }
+
+    const cycle = await this.prisma.recruitmentCycle.findUnique({ where: { id } });
+    if (!cycle) throw new BadRequestException('Cycle not found');
+
+    if (new Date(cycle.deadline) < new Date()) {
+      throw new BadRequestException('The deadline for this recruitment has passed.');
+    }
+
+    const existingMember = await this.prisma.membership.findUnique({
+      where: { userId_organizationId: { userId: req.user.userId, organizationId: cycle.organizationId } }
+    });
+    if (existingMember) {
+      throw new BadRequestException('You are already a member of this club.');
+    }
+
+    return this.prisma.application.create({
       data: { recruitmentCycleId: id, userId: req.user.userId, pitch },
       include: { recruitmentCycle: { include: { organization: { include: { memberships: { where: { role: 'CLUB_HEAD' } } } } } } }
     });
-    
-    // Notify Club Head
-    const headId = application.recruitmentCycle.organization.memberships[0]?.userId;
-    if (headId) {
-      await this.notifications.create(headId, 'New Application', 'A student has applied to your recruitment cycle.');
-    }
-    return application;
   }
 
   @UseGuards(JwtAuthGuard)
@@ -60,13 +67,34 @@ export class RecruitmentController {
 
   @UseGuards(JwtAuthGuard)
   @Patch('applications/:id')
-  async updateAppStatus(@Param('id') id: string, @Body('status') status: string) {
-    const app = await this.prisma.application.update({
-      where: { id }, data: { status }
+  async updateAppStatus(@Param('id') id: string, @Body('status') status: string, @Req() req: any) {
+    const app = await this.prisma.application.findUnique({
+      where: { id },
+      include: { recruitmentCycle: true }
     });
-    
-    // Notify Student
-    await this.notifications.create(app.userId, `Application ${status}`, `Your application status has been updated to ${status}.`);
-    return app;
+    if (!app) throw new BadRequestException('Application not found');
+
+    // FLAW 7 FIX: Verify requester is CLUB_HEAD of the organization
+    const requester = await this.prisma.membership.findUnique({
+      where: { userId_organizationId: { userId: req.user.userId, organizationId: app.recruitmentCycle.organizationId } }
+    });
+    if (!requester || requester.role !== 'CLUB_HEAD') {
+      throw new ForbiddenException('Only the Club Head can update application statuses.');
+    }
+
+    const updatedApp = await this.prisma.application.update({ where: { id }, data: { status } });
+
+    // FLAW 1 FIX: If ACCEPTED, create a Membership
+    if (status === 'ACCEPTED') {
+      const existingMembership = await this.prisma.membership.findUnique({
+        where: { userId_organizationId: { userId: app.userId, organizationId: app.recruitmentCycle.organizationId } }
+      });
+      if (!existingMembership) {
+        await this.prisma.membership.create({
+          data: { userId: app.userId, organizationId: app.recruitmentCycle.organizationId, role: 'MEMBER' }
+        });
+      }
+    }
+    return updatedApp;
   }
 }

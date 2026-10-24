@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, UseGuards, Req, Patch, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, UseGuards, Req, Patch, Query, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { OrganizationsService } from './organizations.service';
 import { CreateOrganizationDto } from './dto/create-organization.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -77,9 +77,19 @@ export class OrganizationsController {
   @Roles('ADMIN')
   @Patch(':id/guardian')
   async assignGuardian(@Param('id') id: string, @Body('facultyId') facultyId: string) {
+    // FLAW 10 FIX: Verify the target user is a FACULTY
+    const faculty = await this.prisma.user.findUnique({ where: { id: facultyId } });
+    if (!faculty || faculty.globalRole !== 'FACULTY') {
+      throw new BadRequestException('Can only assign a FACULTY user as a guardian.');
+    }
     return this.prisma.organization.update({
       where: { id }, data: { facultyGuardianId: facultyId },
     });
+  }
+
+  @Get(':id')
+  getOrganizationById(@Param('id') id: string) {
+    return this.organizationsService.getOrganizationById(id);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -93,7 +103,20 @@ export class OrganizationsController {
 
   @UseGuards(JwtAuthGuard)
   @Patch('members/:memberId')
-  async updateMemberRole(@Param('memberId') memberId: string, @Body('role') role: any) {
+  async updateMemberRole(@Param('memberId') memberId: string, @Body('role') role: any, @Req() req: any) {
+    // FLAW 6 FIX: Verify requester is CLUB_HEAD of this specific organization
+    const targetMembership = await this.prisma.membership.findUnique({ where: { id: memberId } });
+    if (!targetMembership) throw new BadRequestException('Membership not found');
+
+    const requester = await this.prisma.membership.findUnique({
+      where: { userId_organizationId: { userId: req.user.userId, organizationId: targetMembership.organizationId } }
+    });
+
+    if (!requester || requester.role !== 'CLUB_HEAD') {
+      throw new ForbiddenException('Only the Club Head of this club can change member roles.');
+    }
+
     return this.prisma.membership.update({ where: { id: memberId }, data: { role: role } });
   }
 }
+

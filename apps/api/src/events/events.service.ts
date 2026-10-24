@@ -1,4 +1,4 @@
-import { Injectable, ForbiddenException, ConflictException, NotFoundException } from '@nestjs/common';
+import { Injectable, ForbiddenException, ConflictException, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateEventDto } from './dto/create-event.dto';
 
@@ -22,9 +22,13 @@ export class EventsService {
     const membership = await this.prisma.membership.findUnique({
       where: { userId_organizationId: { userId, organizationId: dto.organizationId } },
     });
-
     if (!membership || (membership.role !== 'CLUB_HEAD' && membership.role !== 'COMMITTEE_MEMBER')) {
       throw new ForbiddenException('Only Club Heads can create events');
+    }
+
+    // FLAW FIX: Validate dates
+    if (new Date(dto.endDate) < new Date(dto.startDate)) {
+      throw new BadRequestException('End date cannot be before start date');
     }
 
     return this.prisma.event.create({
@@ -32,16 +36,29 @@ export class EventsService {
         title: dto.title, description: dto.description, startDate: new Date(dto.startDate), endDate: new Date(dto.endDate),
         organizationId: dto.organizationId, status: 'PUBLISHED', isFest: dto.isFest || false, parentEventId: dto.parentEventId || null,
         maxCapacity: dto.maxCapacity || null,
+        venue: dto.venue || null,
       },
     });
   }
 
   async register(eventId: string, userId: string) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    
+    // FLAW FIX: Only students can register
+    if (user?.globalRole !== 'STUDENT') {
+      throw new ForbiddenException('Only students can register for events.');
+    }
+
     const event = await this.prisma.event.findUnique({
       where: { id: eventId },
       include: { registrations: true }
     });
     if (!event) throw new NotFoundException('Event not found');
+
+    // FLAW FIX: Cannot register for past events
+    if (new Date(event.startDate) < new Date()) {
+      throw new BadRequestException('Cannot register for an event that has already started.');
+    }
 
     const existing = await this.prisma.eventRegistration.findUnique({
       where: { userId_eventId: { userId, eventId } },
@@ -69,7 +86,6 @@ export class EventsService {
 
     await this.prisma.eventRegistration.delete({ where: { id: reg.id } });
 
-    // If the cancelled person was REGISTERED, promote the first WAITLISTED person
     if (reg.status === 'REGISTERED') {
       const nextInLine = await this.prisma.eventRegistration.findFirst({
         where: { eventId, status: 'WAITLISTED' },
@@ -100,6 +116,18 @@ export class EventsService {
     });
   }
 
+  async getEventById(id: string) {
+    return this.prisma.event.findUnique({
+      where: { id },
+      include: {
+        organization: true,
+        registrations: {
+          include: { user: { include: { studentProfile: true, facultyProfile: true } } }
+        }
+      }
+    });
+  }
+
   async markAttendance(registrationId: string, status: string) {
     return this.prisma.eventRegistration.update({
       where: { id: registrationId },
@@ -107,3 +135,4 @@ export class EventsService {
     });
   }
 }
+

@@ -10,7 +10,6 @@ export default function ClubManagement() {
   const [members, setMembers] = useState<any[]>([]);
   const [announcements, setAnnouncements] = useState<any[]>([]);
   
-  // Announcement Modal State
   const [showModal, setShowModal] = useState(false);
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
@@ -106,7 +105,6 @@ export default function ClubManagement() {
           </div>
         </div>
 
-        {/* Previous Announcements */}
         <div className="bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-700">
           <h2 className="text-2xl font-bold text-slate-800 dark:text-white mb-6 flex items-center gap-2">
             <Megaphone className="text-brand-600" /> Past Announcements
@@ -125,7 +123,6 @@ export default function ClubManagement() {
 
       </div>
 
-      {/* Broadcast Modal */}
       <AnimatePresence>
         {showModal && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -135,8 +132,8 @@ export default function ClubManagement() {
                 <button onClick={() => setShowModal(false)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full"><X size={24}/></button>
               </div>
               <form onSubmit={handleSendAnnouncement} className="space-y-4">
-                <input type="text" placeholder="Announcement Title" required className="w-full p-3 border border-slate-300 dark:border-slate-600 rounded-xl bg-slate-50 dark:bg-slate-700 focus:ring-2 focus:ring-brand-500 outline-none" value={title} onChange={e => setTitle(e.target.value)} />
-                <textarea placeholder="Write your message to all members..." required rows={4} className="w-full p-3 border border-slate-300 dark:border-slate-600 rounded-xl bg-slate-50 dark:bg-slate-700 focus:ring-2 focus:ring-brand-500 outline-none" value={content} onChange={e => setContent(e.target.value)} />
+                <input type="text" placeholder="Announcement Title" required className="w-full p-3 border border-slate-300 dark:border-slate-600 rounded-xl bg-slate-50 dark:bg-slate-700 focus:ring-2 focus:ring-brand-500 outline-none text-slate-800 dark:text-white" value={title} onChange={e => setTitle(e.target.value)} />
+                <textarea placeholder="Write your message to all members..." required rows={4} className="w-full p-3 border border-slate-300 dark:border-slate-600 rounded-xl bg-slate-50 dark:bg-slate-700 focus:ring-2 focus:ring-brand-500 outline-none text-slate-800 dark:text-white" value={content} onChange={e => setContent(e.target.value)} />
                 <button type="submit" disabled={sending} className="w-full bg-brand-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-brand-500 transition shadow-md disabled:opacity-50">
                   {sending ? 'Sending...' : 'Broadcast to Members'}
                 </button>

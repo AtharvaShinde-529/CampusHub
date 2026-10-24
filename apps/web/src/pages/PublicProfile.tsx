@@ -2,7 +2,7 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../api/axios';
 import Navbar from '../components/Navbar';
-import { ArrowLeft, Mail, BookOpen, Briefcase, Award, Building2 } from 'lucide-react';
+import { ArrowLeft, Mail, BookOpen, Briefcase, Award, Building2, Globe, ExternalLink } from 'lucide-react';
 
 export default function PublicProfile() {
   const { id } = useParams();
@@ -35,7 +35,6 @@ export default function PublicProfile() {
         </button>
 
         <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
-          {/* Header Banner */}
           <div className="h-32 bg-gradient-to-r from-brand-600 to-purple-600"></div>
           
           <div className="px-8 pb-8">
@@ -55,13 +54,27 @@ export default function PublicProfile() {
             </div>
 
             <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white">{name}</h1>
-            <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 mt-2 mb-6">
-              <Mail size={16} /> {profile.email}
+            
+            <div className="flex flex-col gap-2 mt-2 mb-6">
+              <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
+                <Mail size={16} /> {profile.email}
+              </div>
+              <div className="flex gap-4 mt-2">
+                {profile.studentProfile?.githubUrl && (
+                  <a href={profile.studentProfile.githubUrl} target="_blank" rel="noreferrer" className="text-slate-700 dark:text-slate-300 hover:text-brand-600 transition">
+                    <Globe size={24} />
+                  </a>
+                )}
+                {profile.studentProfile?.linkedinUrl && (
+                  <a href={profile.studentProfile.linkedinUrl} target="_blank" rel="noreferrer" className="text-blue-700 dark:text-blue-400 hover:text-blue-500 transition">
+                    <ExternalLink size={24} />
+                  </a>
+                )}
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="space-y-6">
-                {/* Bio */}
                 <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-2xl border border-slate-100 dark:border-slate-700">
                   <h3 className="flex items-center gap-2 font-bold text-lg text-slate-800 dark:text-white mb-3">
                     <BookOpen size={20} className="text-brand-600" /> About
@@ -69,7 +82,6 @@ export default function PublicProfile() {
                   <p className="text-slate-600 dark:text-slate-300 whitespace-pre-wrap">{bio || 'No bio provided yet.'}</p>
                 </div>
 
-                {/* Skills */}
                 {profile.globalRole === 'STUDENT' && (
                   <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-2xl border border-slate-100 dark:border-slate-700">
                     <h3 className="flex items-center gap-2 font-bold text-lg text-slate-800 dark:text-white mb-3">
@@ -87,7 +99,6 @@ export default function PublicProfile() {
               </div>
 
               <div className="space-y-6">
-                {/* Projects */}
                 {profile.globalRole === 'STUDENT' && (
                   <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-2xl border border-slate-100 dark:border-slate-700">
                     <h3 className="flex items-center gap-2 font-bold text-lg text-slate-800 dark:text-white mb-3">
@@ -103,7 +114,6 @@ export default function PublicProfile() {
                   </div>
                 )}
 
-                {/* Memberships */}
                 <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-2xl border border-slate-100 dark:border-slate-700">
                   <h3 className="flex items-center gap-2 font-bold text-lg text-slate-800 dark:text-white mb-3">
                     <Building2 size={20} className="text-brand-600" /> Clubs Joined

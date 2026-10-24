@@ -16,6 +16,11 @@ export class AuthService {
     const existingUser = await this.prisma.user.findUnique({ where: { email: dto.email } });
     if (existingUser) throw new ConflictException('Email already exists');
 
+    // FLAW 5 FIX: Block ADMIN registration from public endpoint
+    if (dto.role === 'ADMIN') {
+      throw new ConflictException('Cannot register as Admin via public endpoint.');
+    }
+
     const hash = await argon2.hash(dto.password);
 
     const user = await this.prisma.user.create({
@@ -65,3 +70,4 @@ export class AuthService {
     };
   }
 }
+

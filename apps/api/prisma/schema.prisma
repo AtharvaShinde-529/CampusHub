@@ -69,6 +69,8 @@ model StudentProfile {
   interests    String[]
   skills       String[]
   bio          String?
+  githubUrl    String?
+  linkedinUrl  String?
   projects     String[]
   user         User     @relation(fields: [userId], references: [id])
 }
@@ -149,7 +151,8 @@ model Event {
   status         String   @default("DRAFT")
   isFest         Boolean  @default(false)
   parentEventId  String?
-  maxCapacity    Int?  
+  maxCapacity    Int?
+  venue          String?  
   organization   Organization      @relation(fields: [organizationId], references: [id])
   registrations  EventRegistration[]
 }
@@ -227,5 +230,7 @@ model Announcement {
   createdAt      DateTime     @default(now())
   organization   Organization @relation(fields: [organizationId], references: [id])
 }
+
+
 
 

@@ -18,6 +18,8 @@ import Chat from './pages/Chat';
 import PublicProfile from './pages/PublicProfile';
 import AdminAudit from './pages/AdminAudit';
 import AdminOrganizations from './pages/AdminOrganizations';
+import EventDetail from './pages/EventDetail';
+import ClubDetail from './pages/ClubDetail';
 
 function App() {
   return (
@@ -30,9 +32,12 @@ function App() {
         <Route path="/organizations" element={<Organizations />} />
         <Route path="/organizations/:id/manage" element={<ClubManagement />} />
         <Route path="/events" element={<Events />} />
+        <Route path="/events/:id" element={<EventDetail />} />
+        <Route path="/clubs/:id" element={<ClubDetail />} />
         <Route path="/calendar" element={<Calendar />} />
         <Route path="/opportunities" element={<Opportunities />} />
         <Route path="/settings" element={<Settings />} />
+        <Route path="/profile" element={<Settings />} />
         <Route path="/recruitment" element={<Recruitment />} />
         <Route path="/admin" element={<AdminDashboard />} />
         <Route path="/admin/approvals" element={<AdminApprovals />} />
@@ -48,4 +53,3 @@ function App() {
   );
 }
 export default App;
-

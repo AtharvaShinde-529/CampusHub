@@ -1,0 +1,1923 @@
+﻿
+// ==========================================================
+// FILE: C:\Users\athar\CampusHub\apps\api\src\app.controller.spec.ts
+// ==========================================================
+
+import { Test, TestingModule } from '@nestjs/testing';
+import { AppController } from './app.controller';
+import { AppService } from './app.service';
+
+describe('AppController', () => {
+  let appController: AppController;
+
+  beforeEach(async () => {
+    const app: TestingModule = await Test.createTestingModule({
+      controllers: [AppController],
+      providers: [AppService],
+    }).compile();
+
+    appController = app.get<AppController>(AppController);
+  });
+
+  describe('root', () => {
+    it('should return "Hello World!"', () => {
+      expect(appController.getHello()).toBe('Hello World!');
+    });
+  });
+});
+
+// ==========================================================
+// FILE: C:\Users\athar\CampusHub\apps\api\src\app.controller.ts
+// ==========================================================
+
+import { Controller, Get } from '@nestjs/common';
+import { AppService } from './app.service';
+
+@Controller()
+export class AppController {
+  constructor(private readonly appService: AppService) {}
+
+  @Get()
+  getHello(): string {
+    return this.appService.getHello();
+  }
+}
+
+// ==========================================================
+// FILE: C:\Users\athar\CampusHub\apps\api\src\app.module.ts
+// ==========================================================
+
+import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
+import { PrismaModule } from './prisma/prisma.module';
+import { AuthModule } from './auth/auth.module';
+import { OrganizationsModule } from './organizations/organizations.module';
+import { EventsModule } from './events/events.module';
+import { OpportunitiesModule } from './opportunities/opportunities.module';
+import { FeedModule } from './feed/feed.module';
+import { UsersModule } from './users/users.module';
+import { RecruitmentModule } from './recruitment/recruitment.module';
+import { AnalyticsModule } from './analytics/analytics.module';
+import { NotificationsModule } from './notifications/notifications.module';
+import { ExchangeModule } from './exchange/exchange.module';
+import { MessagesModule } from './messages/messages.module';
+import { SearchModule } from './search/search.module';
+import { AuditModule } from './audit/audit.module';
+import { AnnouncementsModule } from './announcements/announcements.module';
+import { RecommendationsModule } from './recommendations/recommendations.module';
+
+@Module({
+  imports: [
+    ConfigModule.forRoot({ isGlobal: true }),
+    PrismaModule, AuthModule, OrganizationsModule, EventsModule,
+    OpportunitiesModule, FeedModule, UsersModule, RecruitmentModule,
+    AnalyticsModule, NotificationsModule, ExchangeModule, MessagesModule, SearchModule, AuditModule, AnnouncementsModule, RecommendationsModule,
+  ],
+})
+export class AppModule {}
+
+
+
+
+
+
+// ==========================================================
+// FILE: C:\Users\athar\CampusHub\apps\api\src\app.service.ts
+// ==========================================================
+
+import { Injectable } from '@nestjs/common';
+
+@Injectable()
+export class AppService {
+  getHello(): string {
+    return 'Hello World!';
+  }
+}
+
+// ==========================================================
+// FILE: C:\Users\athar\CampusHub\apps\api\src\main.ts
+// ==========================================================
+
+import { NestFactory } from '@nestjs/core';
+import { AppModule } from './app.module';
+import { ValidationPipe } from '@nestjs/common';
+import { NestExpressApplication } from '@nestjs/platform-express';
+import { join } from 'path';
+
+async function bootstrap() {
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  app.enableCors();
+  app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
+  
+  // Fixed: Using process.cwd() to correctly find the uploads folder
+  app.useStaticAssets(join(process.cwd(), 'uploads'), {
+    prefix: '/uploads/',
+  });
+
+  await app.listen(3000);
+  console.log(`Application is running on: http://localhost:3000`);
+}
+bootstrap();
+
+// ==========================================================
+// FILE: C:\Users\athar\CampusHub\apps\api\src\analytics\analytics.controller.ts
+// ==========================================================
+
+import { Controller, Get, UseGuards } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { RolesGuard } from '../auth/roles.guard';
+import { Roles } from '../auth/roles.decorator';
+
+@Controller('analytics')
+export class AnalyticsController {
+  constructor(private prisma: PrismaService) {}
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @Get()
+  async getStats() {
+    const students = await this.prisma.user.count({ where: { globalRole: 'STUDENT' } });
+    const faculty = await this.prisma.user.count({ where: { globalRole: 'FACULTY' } });
+    const clubs = await this.prisma.organization.count({ where: { status: 'ACTIVE' } });
+    const pendingClubs = await this.prisma.organization.count({ where: { status: 'PENDING_REVIEW' } });
+    const events = await this.prisma.event.count();
+    const opportunities = await this.prisma.opportunity.count({ where: { status: 'PUBLISHED' } });
+    return { students, faculty, clubs, pendingClubs, events, opportunities };
+  }
+}
+
+// ==========================================================
+// FILE: C:\Users\athar\CampusHub\apps\api\src\analytics\analytics.module.ts
+// ==========================================================
+
+import { Module } from '@nestjs/common';
+import { AnalyticsController } from './analytics.controller';
+@Module({ controllers: [AnalyticsController] })
+export class AnalyticsModule {}
+
+// ==========================================================
+// FILE: C:\Users\athar\CampusHub\apps\api\src\announcements\announcements.controller.ts
+// ==========================================================
+
+import { Controller, Get, Post, Body, Param, UseGuards, Req } from '@nestjs/common';
+import { AnnouncementsService } from './announcements.service';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+
+@Controller('announcements')
+export class AnnouncementsController {
+  constructor(private readonly announcementsService: AnnouncementsService) {}
+
+  @UseGuards(JwtAuthGuard)
+  @Post()
+  create(@Body() body: any, @Req() req: any) {
+    return this.announcementsService.create(body, req.user.userId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get(':orgId')
+  getClubAnnouncements(@Param('orgId') orgId: string) {
+    return this.announcementsService.getClubAnnouncements(orgId);
+  }
+}
+
+// ==========================================================
+// FILE: C:\Users\athar\CampusHub\apps\api\src\announcements\announcements.module.ts
+// ==========================================================
+
+import { Module } from '@nestjs/common';
+import { AnnouncementsController } from './announcements.controller';
+import { AnnouncementsService } from './announcements.service';
+import { NotificationsModule } from '../notifications/notifications.module';
+
+@Module({
+  imports: [NotificationsModule],
+  controllers: [AnnouncementsController],
+  providers: [AnnouncementsService],
+})
+export class AnnouncementsModule {}
+
+// ==========================================================
+// FILE: C:\Users\athar\CampusHub\apps\api\src\announcements\announcements.service.ts
+// ==========================================================
+
+import { Injectable, ForbiddenException } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
+
+@Injectable()
+export class AnnouncementsService {
+  constructor(
+    private prisma: PrismaService,
+    private notifications: NotificationsService
+  ) {}
+
+  async create(data: { title: string, content: string, organizationId: string }, userId: string) {
+    // 1. Verify user is a Club Head
+    const membership = await this.prisma.membership.findUnique({
+      where: { userId_organizationId: { userId, organizationId: data.organizationId } },
+    });
+
+    if (!membership || (membership.role !== 'CLUB_HEAD' && membership.role !== 'COMMITTEE_MEMBER')) {
+      throw new ForbiddenException('Only Club Heads can post announcements');
+    }
+
+    // 2. Create the announcement
+    const announcement = await this.prisma.announcement.create({
+      data: {
+        title: data.title,
+        content: data.content,
+        organizationId: data.organizationId,
+      },
+    });
+
+    // 3. Find all members of the club to notify
+    const members = await this.prisma.membership.findMany({
+      where: { organizationId: data.organizationId, isActive: true },
+    });
+
+    // 4. Send notifications to everyone (except the sender)
+    const org = await this.prisma.organization.findUnique({ where: { id: data.organizationId } });
+    const orgName = org?.name || 'Club'; // FIX: Added fallback for TypeScript
+
+    const promises = members
+      .filter(m => m.userId !== userId) // Don't notify the sender
+      .map(m => this.notifications.create(m.userId, `?? ${orgName} Announcement`, data.title));
+
+    await Promise.all(promises);
+
+    return announcement;
+  }
+
+  async getClubAnnouncements(orgId: string) {
+    return this.prisma.announcement.findMany({
+      where: { organizationId: orgId },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+}
+
+// ==========================================================
+// FILE: C:\Users\athar\CampusHub\apps\api\src\audit\audit.controller.ts
+// ==========================================================
+
+import { Controller, Get, UseGuards } from '@nestjs/common';
+import { AuditService } from './audit.service';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { RolesGuard } from '../auth/roles.guard';
+import { Roles } from '../auth/roles.decorator';
+
+@Controller('audit')
+export class AuditController {
+  constructor(private readonly auditService: AuditService) {}
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @Get()
+  getLogs() {
+    return this.auditService.getLogs();
+  }
+}
+
+// ==========================================================
+// FILE: C:\Users\athar\CampusHub\apps\api\src\audit\audit.module.ts
+// ==========================================================
+
+import { Module, Global } from '@nestjs/common';
+import { AuditController } from './audit.controller';
+import { AuditService } from './audit.service';
+
+@Global()
+@Module({
+  controllers: [AuditController],
+  providers: [AuditService],
+  exports: [AuditService],
+})
+export class AuditModule {}
+
+// ==========================================================
+// FILE: C:\Users\athar\CampusHub\apps\api\src\audit\audit.service.ts
+// ==========================================================
+
+import { Injectable } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+
+@Injectable()
+export class AuditService {
+  constructor(private prisma: PrismaService) {}
+
+  async logAction(userId: string, action: string, targetId?: string, details?: string) {
+    return this.prisma.auditLog.create({
+      data: { userId, action, targetId, details }
+    });
+  }
+
+  async getLogs() {
+    return this.prisma.auditLog.findMany({
+      include: { user: { select: { email: true, globalRole: true } } },
+      orderBy: { createdAt: 'desc' },
+      take: 100 // Limit to last 100 logs
+    });
+  }
+}
+
+// ==========================================================
+// FILE: C:\Users\athar\CampusHub\apps\api\src\auth\auth.controller.ts
+// ==========================================================
+
+import { Controller, Post, Body } from '@nestjs/common';
+import { AuthService } from './auth.service';
+import { RegisterDto } from './dto/register.dto';
+import { LoginDto } from './dto/login.dto';
+
+@Controller('auth')
+export class AuthController {
+  constructor(private readonly authService: AuthService) {}
+
+  @Post('register')
+  register(@Body() dto: RegisterDto) {
+    return this.authService.register(dto);
+  }
+
+  @Post('login')
+  login(@Body() dto: LoginDto) {
+    return this.authService.login(dto);
+  }
+}
+
+// ==========================================================
+// FILE: C:\Users\athar\CampusHub\apps\api\src\auth\auth.module.ts
+// ==========================================================
+
+import { Module } from '@nestjs/common';
+import { AuthService } from './auth.service';
+import { AuthController } from './auth.controller';
+import { JwtModule } from '@nestjs/jwt';
+import { JwtStrategy } from './jwt.strategy';
+import { PassportModule } from '@nestjs/passport';
+
+@Module({
+  imports: [
+    PassportModule,
+    JwtModule.register({
+      global: true,
+      secret: process.env.JWT_SECRET || 'super-secret-change-this-in-production',
+      signOptions: { expiresIn: '15m' },
+    }),
+  ],
+  controllers: [AuthController],
+  providers: [AuthService, JwtStrategy],
+})
+export class AuthModule {}
+
+// ==========================================================
+// FILE: C:\Users\athar\CampusHub\apps\api\src\auth\auth.service.ts
+// ==========================================================
+
+import { Injectable, ConflictException, UnauthorizedException } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+import { JwtService } from '@nestjs/jwt';
+import * as argon2 from 'argon2';
+import { RegisterDto } from './dto/register.dto';
+import { LoginDto } from './dto/login.dto';
+
+@Injectable()
+export class AuthService {
+  constructor(
+    private prisma: PrismaService,
+    private jwtService: JwtService,
+  ) {}
+
+  async register(dto: RegisterDto) {
+    const existingUser = await this.prisma.user.findUnique({ where: { email: dto.email } });
+    if (existingUser) throw new ConflictException('Email already exists');
+
+    const hash = await argon2.hash(dto.password);
+
+    const user = await this.prisma.user.create({
+      data: {
+        email: dto.email,
+        passwordHash: hash,
+        globalRole: dto.role,
+        status: 'ACTIVE',
+        ...(dto.role === 'STUDENT' ? {
+          studentProfile: {
+            create: {
+              firstName: dto.firstName, lastName: dto.lastName, rollNumber: dto.identifier,
+              department: 'General', interests: [], skills: []
+            }
+          }
+        } : dto.role === 'FACULTY' ? {
+          facultyProfile: {
+            create: {
+              firstName: dto.firstName, lastName: dto.lastName, designation: dto.identifier, department: 'General'
+            }
+          }
+        } : {})
+      },
+      include: { studentProfile: true, facultyProfile: true }
+    });
+
+    return { message: 'User registered successfully', user: { id: user.id, email: user.email, role: user.globalRole } };
+  }
+
+  async login(dto: LoginDto) {
+    const user = await this.prisma.user.findUnique({ where: { email: dto.email } });
+    if (!user) throw new UnauthorizedException('Invalid credentials');
+
+    // Check if user is suspended
+    if (user.status === 'SUSPENDED') {
+      throw new UnauthorizedException('Your account has been suspended. Please contact the administrator.');
+    }
+
+    const isPasswordValid = await argon2.verify(user.passwordHash, dto.password);
+    if (!isPasswordValid) throw new UnauthorizedException('Invalid credentials');
+
+    const payload = { sub: user.id, email: user.email, role: user.globalRole };
+    return {
+      message: 'Login successful',
+      access_token: this.jwtService.sign(payload),
+      user: { id: user.id, email: user.email, role: user.globalRole }
+    };
+  }
+}
+
+// ==========================================================
+// FILE: C:\Users\athar\CampusHub\apps\api\src\auth\jwt-auth.guard.ts
+// ==========================================================
+
+import { Injectable } from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
+
+@Injectable()
+export class JwtAuthGuard extends AuthGuard('jwt') {}
+
+// ==========================================================
+// FILE: C:\Users\athar\CampusHub\apps\api\src\auth\jwt.strategy.ts
+// ==========================================================
+
+import { ExtractJwt, Strategy } from 'passport-jwt';
+import { PassportStrategy } from '@nestjs/passport';
+import { Injectable } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+
+@Injectable()
+export class JwtStrategy extends PassportStrategy(Strategy) {
+  constructor(private prisma: PrismaService) {
+    super({
+      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      ignoreExpiration: false,
+      secretOrKey: process.env.JWT_SECRET || 'super-secret-change-this-in-production',
+    });
+  }
+
+  async validate(payload: any) {
+    return { userId: payload.sub, email: payload.email, role: payload.role };
+  }
+}
+
+// ==========================================================
+// FILE: C:\Users\athar\CampusHub\apps\api\src\auth\roles.decorator.ts
+// ==========================================================
+
+import { SetMetadata } from '@nestjs/common';
+export const Roles = (...roles: string[]) => SetMetadata('roles', roles);
+
+// ==========================================================
+// FILE: C:\Users\athar\CampusHub\apps\api\src\auth\roles.guard.ts
+// ==========================================================
+
+import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
+
+@Injectable()
+export class RolesGuard implements CanActivate {
+  constructor(private reflector: Reflector) {}
+
+  canActivate(context: ExecutionContext): boolean {
+    const requiredRoles = this.reflector.getAllAndOverride<string[]>('roles', [
+      context.getHandler(),
+      context.getClass(),
+    ]);
+    if (!requiredRoles) return true;
+    
+    const { user } = context.switchToHttp().getRequest();
+    return requiredRoles.includes(user.role);
+  }
+}
+
+// ==========================================================
+// FILE: C:\Users\athar\CampusHub\apps\api\src\auth\dto\login.dto.ts
+// ==========================================================
+
+import { IsEmail, IsString } from 'class-validator';
+
+export class LoginDto {
+  @IsEmail()
+  email: string;
+
+  @IsString()
+  password: string;
+}
+
+// ==========================================================
+// FILE: C:\Users\athar\CampusHub\apps\api\src\auth\dto\register.dto.ts
+// ==========================================================
+
+import { IsEmail, IsEnum, IsNotEmpty, IsString, MinLength } from 'class-validator';
+import { GlobalRole } from '@prisma/client';
+
+export class RegisterDto {
+  @IsEmail()
+  email: string;
+
+  @IsString()
+  @MinLength(6)
+  password: string;
+
+  @IsEnum(GlobalRole)
+  role: GlobalRole;
+
+  @IsString()
+  @IsNotEmpty()
+  firstName: string;
+
+  @IsString()
+  @IsNotEmpty()
+  lastName: string;
+
+  @IsString()
+  @IsNotEmpty()
+  identifier: string; // rollNumber for students, designation for faculty
+}
+
+// ==========================================================
+// FILE: C:\Users\athar\CampusHub\apps\api\src\events\events.controller.ts
+// ==========================================================
+
+import { Controller, Get, Post, Body, Param, UseGuards, Req, Query, Patch, Delete } from '@nestjs/common';
+import { EventsService } from './events.service';
+import { CreateEventDto } from './dto/create-event.dto';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+
+@Controller('events')
+export class EventsController {
+  constructor(private readonly eventsService: EventsService) {}
+
+  @Get()
+  findAll(@Query('search') search?: string, @Query('isFest') isFest?: string) {
+    const isFestBool = isFest === 'true' ? true : isFest === 'false' ? false : undefined;
+    return this.eventsService.findAll(search, isFestBool);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post()
+  create(@Body() dto: CreateEventDto, @Req() req: any) {
+    return this.eventsService.create(dto, req.user.userId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post(':id/register')
+  register(@Param('id') id: string, @Req() req: any) {
+    return this.eventsService.register(id, req.user.userId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete(':id/cancel')
+  cancelRegistration(@Param('id') id: string, @Req() req: any) {
+    return this.eventsService.cancelRegistration(id, req.user.userId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('my')
+  getMyEvents(@Req() req: any) {
+    return this.eventsService.findMyEvents(req.user.userId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get(':id/attendees')
+  getAttendees(@Param('id') id: string) {
+    return this.eventsService.getEventAttendees(id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch('attendees/:regId')
+  markAttendance(@Param('regId') regId: string, @Body('status') status: string) {
+    return this.eventsService.markAttendance(regId, status);
+  }
+}
+
+// ==========================================================
+// FILE: C:\Users\athar\CampusHub\apps\api\src\events\events.module.ts
+// ==========================================================
+
+import { Module } from '@nestjs/common';
+import { EventsService } from './events.service';
+import { EventsController } from './events.controller';
+
+@Module({
+  controllers: [EventsController],
+  providers: [EventsService],
+})
+export class EventsModule {}
+
+// ==========================================================
+// FILE: C:\Users\athar\CampusHub\apps\api\src\events\events.service.ts
+// ==========================================================
+
+import { Injectable, ForbiddenException, ConflictException, NotFoundException, BadRequestException } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+import { CreateEventDto } from './dto/create-event.dto';
+
+@Injectable()
+export class EventsService {
+  constructor(private prisma: PrismaService) {}
+
+  async findAll(search?: string, isFest?: boolean) {
+    return this.prisma.event.findMany({
+      where: { 
+        status: 'PUBLISHED',
+        ...(search && { title: { contains: search, mode: 'insensitive' } }),
+        ...(isFest !== undefined && { isFest: isFest }),
+      },
+      include: { organization: true, registrations: true },
+      orderBy: { startDate: 'asc' },
+    });
+  }
+
+  async create(dto: CreateEventDto, userId: string) {
+    const membership = await this.prisma.membership.findUnique({
+      where: { userId_organizationId: { userId, organizationId: dto.organizationId } },
+    });
+    if (!membership || (membership.role !== 'CLUB_HEAD' && membership.role !== 'COMMITTEE_MEMBER')) {
+      throw new ForbiddenException('Only Club Heads can create events');
+    }
+
+    // FLAW FIX: Validate dates
+    if (new Date(dto.endDate) < new Date(dto.startDate)) {
+      throw new BadRequestException('End date cannot be before start date');
+    }
+
+    return this.prisma.event.create({
+      data: {
+        title: dto.title, description: dto.description, startDate: new Date(dto.startDate), endDate: new Date(dto.endDate),
+        organizationId: dto.organizationId, status: 'PUBLISHED', isFest: dto.isFest || false, parentEventId: dto.parentEventId || null,
+        maxCapacity: dto.maxCapacity || null,
+      },
+    });
+  }
+
+  async register(eventId: string, userId: string) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    
+    // FLAW FIX: Only students can register
+    if (user?.globalRole !== 'STUDENT') {
+      throw new ForbiddenException('Only students can register for events.');
+    }
+
+    const event = await this.prisma.event.findUnique({
+      where: { id: eventId },
+      include: { registrations: true }
+    });
+    if (!event) throw new NotFoundException('Event not found');
+
+    // FLAW FIX: Cannot register for past events
+    if (new Date(event.startDate) < new Date()) {
+      throw new BadRequestException('Cannot register for an event that has already started.');
+    }
+
+    const existing = await this.prisma.eventRegistration.findUnique({
+      where: { userId_eventId: { userId, eventId } },
+    });
+    if (existing) throw new ConflictException('Already registered or waitlisted');
+
+    let status = 'REGISTERED';
+    if (event.maxCapacity) {
+      const registeredCount = event.registrations.filter(r => r.status === 'REGISTERED').length;
+      if (registeredCount >= event.maxCapacity) {
+        status = 'WAITLISTED';
+      }
+    }
+
+    return this.prisma.eventRegistration.create({
+      data: { userId, eventId, status },
+    });
+  }
+
+  async cancelRegistration(eventId: string, userId: string) {
+    const reg = await this.prisma.eventRegistration.findUnique({
+      where: { userId_eventId: { userId, eventId } }
+    });
+    if (!reg) throw new NotFoundException('Registration not found');
+
+    await this.prisma.eventRegistration.delete({ where: { id: reg.id } });
+
+    if (reg.status === 'REGISTERED') {
+      const nextInLine = await this.prisma.eventRegistration.findFirst({
+        where: { eventId, status: 'WAITLISTED' },
+        orderBy: { id: 'asc' }
+      });
+      if (nextInLine) {
+        await this.prisma.eventRegistration.update({
+          where: { id: nextInLine.id },
+          data: { status: 'REGISTERED' }
+        });
+      }
+    }
+    return { message: 'Registration cancelled successfully' };
+  }
+
+  async findMyEvents(userId: string) {
+    return this.prisma.eventRegistration.findMany({
+      where: { userId },
+      include: { event: { include: { organization: true } } },
+    });
+  }
+
+  async getEventAttendees(eventId: string) {
+    return this.prisma.eventRegistration.findMany({
+      where: { eventId },
+      include: { user: { include: { studentProfile: true } } },
+      orderBy: { user: { studentProfile: { firstName: 'asc' } } }
+    });
+  }
+
+  async markAttendance(registrationId: string, status: string) {
+    return this.prisma.eventRegistration.update({
+      where: { id: registrationId },
+      data: { status }
+    });
+  }
+}
+
+// ==========================================================
+// FILE: C:\Users\athar\CampusHub\apps\api\src\events\dto\create-event.dto.ts
+// ==========================================================
+
+import { IsNotEmpty, IsString, IsDateString, IsBoolean, IsOptional, IsNumber } from 'class-validator';
+
+export class CreateEventDto {
+  @IsString() @IsNotEmpty() title: string;
+  @IsString() @IsNotEmpty() description: string;
+  @IsDateString() startDate: string;
+  @IsDateString() endDate: string;
+  @IsString() @IsNotEmpty() organizationId: string;
+  
+  @IsBoolean() @IsOptional() isFest?: boolean;
+  @IsString() @IsOptional() parentEventId?: string;
+  @IsNumber() @IsOptional() maxCapacity?: number;
+}
+
+// ==========================================================
+// FILE: C:\Users\athar\CampusHub\apps\api\src\exchange\exchange.controller.ts
+// ==========================================================
+
+import { Controller, Get, Post, Body, Patch, Param, UseGuards, Req, Query } from '@nestjs/common';
+import { ExchangeService } from './exchange.service';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+
+@Controller('exchange')
+export class ExchangeController {
+  constructor(private readonly exchangeService: ExchangeService) {}
+
+  @Get()
+  findAll(@Query('search') search?: string, @Query('type') type?: string) {
+    return this.exchangeService.findAll(search, type);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post()
+  create(@Body() body: any, @Req() req: any) {
+    return this.exchangeService.create(body, req.user.userId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch(':id/status')
+  updateStatus(@Param('id') id: string, @Body('status') status: string, @Req() req: any) {
+    return this.exchangeService.updateStatus(id, status, req.user.userId);
+  }
+}
+
+
+// ==========================================================
+// FILE: C:\Users\athar\CampusHub\apps\api\src\exchange\exchange.module.ts
+// ==========================================================
+
+import { Module } from '@nestjs/common';
+import { ExchangeController } from './exchange.controller';
+import { ExchangeService } from './exchange.service';
+
+@Module({
+  controllers: [ExchangeController],
+  providers: [ExchangeService],
+})
+export class ExchangeModule {}
+
+// ==========================================================
+// FILE: C:\Users\athar\CampusHub\apps\api\src\exchange\exchange.service.ts
+// ==========================================================
+
+import { Injectable, ForbiddenException, NotFoundException } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+
+@Injectable()
+export class ExchangeService {
+  constructor(private prisma: PrismaService) {}
+
+  async findAll(search?: string, type?: string) {
+    return this.prisma.exchangeItem.findMany({
+      where: {
+        ...(search && { title: { contains: search, mode: 'insensitive' } }),
+        ...(type && { type: type }),
+      },
+      include: { user: { include: { studentProfile: true, facultyProfile: true } } },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async create(data: any, userId: string) {
+    return this.prisma.exchangeItem.create({
+      data: { title: data.title, description: data.description, type: data.type, userId: userId },
+    });
+  }
+
+  async updateStatus(id: string, status: string, userId: string) {
+    // FLAW FIX: Only the creator can update the status
+    const item = await this.prisma.exchangeItem.findUnique({ where: { id } });
+    if (!item) throw new NotFoundException('Item not found');
+    if (item.userId !== userId) {
+      throw new ForbiddenException('You can only update your own listings.');
+    }
+
+    return this.prisma.exchangeItem.update({
+      where: { id },
+      data: { status },
+    });
+  }
+}
+
+// ==========================================================
+// FILE: C:\Users\athar\CampusHub\apps\api\src\feed\feed.controller.ts
+// ==========================================================
+
+import { Controller, Get, UseGuards } from '@nestjs/common';
+import { FeedService } from './feed.service';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+
+@Controller('feed')
+export class FeedController {
+  constructor(private readonly feedService: FeedService) {}
+
+  @UseGuards(JwtAuthGuard)
+  @Get()
+  getFeed() {
+    return this.feedService.getUnifiedFeed();
+  }
+}
+
+// ==========================================================
+// FILE: C:\Users\athar\CampusHub\apps\api\src\feed\feed.module.ts
+// ==========================================================
+
+import { Module } from '@nestjs/common';
+import { FeedService } from './feed.service';
+import { FeedController } from './feed.controller';
+
+@Module({
+  controllers: [FeedController],
+  providers: [FeedService],
+})
+export class FeedModule {}
+
+// ==========================================================
+// FILE: C:\Users\athar\CampusHub\apps\api\src\feed\feed.service.ts
+// ==========================================================
+
+import { Injectable } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+
+@Injectable()
+export class FeedService {
+  constructor(private prisma: PrismaService) {}
+
+  async getUnifiedFeed() {
+    // Fetch top 5 events, opportunities, and clubs
+    const [events, opportunities, clubs] = await Promise.all([
+      this.prisma.event.findMany({
+        where: { status: 'PUBLISHED' },
+        take: 5,
+        orderBy: { startDate: 'asc' },
+        include: { organization: true },
+      }),
+      this.prisma.opportunity.findMany({
+        where: { status: 'PUBLISHED' },
+        take: 5,
+        orderBy: { deadline: 'asc' },
+      }),
+      this.prisma.organization.findMany({
+        where: { status: 'ACTIVE' },
+        take: 5,
+        orderBy: { createdAt: 'desc' },
+      }),
+    ]);
+
+    return { events, opportunities, clubs };
+  }
+}
+
+// ==========================================================
+// FILE: C:\Users\athar\CampusHub\apps\api\src\messages\chat.gateway.ts
+// ==========================================================
+
+import { WebSocketGateway, WebSocketServer, SubscribeMessage, MessageBody, ConnectedSocket } from '@nestjs/websockets';
+import { Server, Socket } from 'socket.io';
+import { MessagesService } from './messages.service';
+
+@WebSocketGateway({ cors: { origin: '*' } })
+export class ChatGateway {
+  @WebSocketServer()
+  server: Server;
+
+  constructor(private readonly messagesService: MessagesService) {}
+
+  @SubscribeMessage('sendMessage')
+  async handleMessage(
+    @MessageBody() data: { senderId: string, receiverId: string, content: string },
+    @ConnectedSocket() client: Socket
+  ) {
+    // 1. Save to Database
+    const newMessage = await this.messagesService.sendMessage(data.senderId, data.receiverId, data.content);
+    
+    // 2. Broadcast the message to the receiver and the sender
+    this.server.emit('newMessage', newMessage);
+  }
+}
+
+// ==========================================================
+// FILE: C:\Users\athar\CampusHub\apps\api\src\messages\messages.controller.ts
+// ==========================================================
+
+import { Controller, Get, Post, Body, Param, UseGuards, Req } from '@nestjs/common';
+import { MessagesService } from './messages.service';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+
+@Controller('messages')
+export class MessagesController {
+  constructor(private readonly messagesService: MessagesService) {}
+
+  @UseGuards(JwtAuthGuard)
+  @Get('conversations')
+  getConversations(@Req() req: any) {
+    return this.messagesService.getConversations(req.user.userId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get(':userId')
+  getMessages(@Req() req: any, @Param('userId') otherUserId: string) {
+    return this.messagesService.getMessages(req.user.userId, otherUserId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post()
+  sendMessage(@Req() req: any, @Body() body: { receiverId: string; content: string }) {
+    return this.messagesService.sendMessage(req.user.userId, body.receiverId, body.content);
+  }
+}
+
+// ==========================================================
+// FILE: C:\Users\athar\CampusHub\apps\api\src\messages\messages.module.ts
+// ==========================================================
+
+import { Module } from '@nestjs/common';
+import { MessagesController } from './messages.controller';
+import { MessagesService } from './messages.service';
+import { ChatGateway } from './chat.gateway';
+
+@Module({
+  controllers: [MessagesController],
+  providers: [MessagesService, ChatGateway],
+})
+export class MessagesModule {}
+
+// ==========================================================
+// FILE: C:\Users\athar\CampusHub\apps\api\src\messages\messages.service.ts
+// ==========================================================
+
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+
+@Injectable()
+export class MessagesService {
+  constructor(private prisma: PrismaService) {}
+
+  async getConversations(userId: string) {
+    const messages = await this.prisma.message.findMany({
+      where: { OR: [{ senderId: userId }, { receiverId: userId }] },
+      orderBy: { createdAt: 'desc' },
+      include: { sender: true, receiver: true },
+    });
+
+    const usersMap = new Map();
+    messages.forEach(msg => {
+      const otherUser = msg.senderId === userId ? msg.receiver : msg.sender;
+      if (!usersMap.has(otherUser.id)) {
+        usersMap.set(otherUser.id, {
+          id: otherUser.id,
+          email: otherUser.email,
+          avatarUrl: otherUser.avatarUrl,
+          latestMessage: msg.content,
+          createdAt: msg.createdAt,
+        });
+      }
+    });
+    return Array.from(usersMap.values());
+  }
+
+  async getMessages(userId: string, otherUserId: string) {
+    return this.prisma.message.findMany({
+      where: {
+        OR: [
+          { senderId: userId, receiverId: otherUserId },
+          { senderId: otherUserId, receiverId: userId },
+        ],
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+  }
+
+  async sendMessage(senderId: string, receiverId: string, content: string) {
+    // FLAW FIX: Cannot message yourself
+    if (senderId === receiverId) {
+      throw new BadRequestException('You cannot send a message to yourself.');
+    }
+    return this.prisma.message.create({
+      data: { senderId, receiverId, content },
+    });
+  }
+}
+
+// ==========================================================
+// FILE: C:\Users\athar\CampusHub\apps\api\src\notifications\notifications.controller.ts
+// ==========================================================
+
+import { Controller, Get, Patch, Param, UseGuards, Req } from '@nestjs/common';
+import { NotificationsService } from './notifications.service';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+
+@Controller('notifications')
+export class NotificationsController {
+  constructor(private readonly notificationsService: NotificationsService) {}
+
+  @UseGuards(JwtAuthGuard)
+  @Get()
+  getMyNotifications(@Req() req: any) {
+    return this.notificationsService.findMyNotifications(req.user.userId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch(':id/read')
+  markAsRead(@Param('id') id: string) {
+    return this.notificationsService.markAsRead(id);
+  }
+}
+
+// ==========================================================
+// FILE: C:\Users\athar\CampusHub\apps\api\src\notifications\notifications.module.ts
+// ==========================================================
+
+import { Module } from '@nestjs/common';
+import { NotificationsController } from './notifications.controller';
+import { NotificationsService } from './notifications.service';
+
+@Module({
+  controllers: [NotificationsController],
+  providers: [NotificationsService],
+  exports: [NotificationsService],
+})
+export class NotificationsModule {}
+
+// ==========================================================
+// FILE: C:\Users\athar\CampusHub\apps\api\src\notifications\notifications.service.ts
+// ==========================================================
+
+import { Injectable } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+
+@Injectable()
+export class NotificationsService {
+  constructor(private prisma: PrismaService) {}
+
+  async create(userId: string, title: string, message: string) {
+    return this.prisma.notification.create({
+      data: { userId, title, message }
+    });
+  }
+
+  async findMyNotifications(userId: string) {
+    return this.prisma.notification.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+      take: 10
+    });
+  }
+
+  async markAsRead(id: string) {
+    return this.prisma.notification.update({
+      where: { id },
+      data: { isRead: true }
+    });
+  }
+}
+
+// ==========================================================
+// FILE: C:\Users\athar\CampusHub\apps\api\src\opportunities\opportunities.controller.ts
+// ==========================================================
+
+import { Controller, Get, Post, Body, Patch, Param, UseGuards, Req, Query } from '@nestjs/common';
+import { OpportunitiesService } from './opportunities.service';
+import { CreateOpportunityDto } from './dto/create-opportunity.dto';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { RolesGuard } from '../auth/roles.guard';
+import { Roles } from '../auth/roles.decorator';
+
+@Controller('opportunities')
+export class OpportunitiesController {
+  constructor(private readonly opportunitiesService: OpportunitiesService) {}
+
+  @Get()
+  findAll(@Query('search') search?: string, @Query('category') category?: string) {
+    return this.opportunitiesService.findApproved(search, category);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @Get('pending')
+  findPending() { return this.opportunitiesService.findPending(); }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('FACULTY', 'ADMIN')
+  @Post()
+  create(@Body() dto: CreateOpportunityDto, @Req() req: any) {
+    return this.opportunitiesService.create(dto, req.user.userId);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @Patch(':id/approve')
+  approve(@Param('id') id: string) { return this.opportunitiesService.approve(id); }
+}
+
+// ==========================================================
+// FILE: C:\Users\athar\CampusHub\apps\api\src\opportunities\opportunities.module.ts
+// ==========================================================
+
+import { Module } from '@nestjs/common';
+import { OpportunitiesService } from './opportunities.service';
+import { OpportunitiesController } from './opportunities.controller';
+
+@Module({
+  controllers: [OpportunitiesController],
+  providers: [OpportunitiesService],
+})
+export class OpportunitiesModule {}
+
+// ==========================================================
+// FILE: C:\Users\athar\CampusHub\apps\api\src\opportunities\opportunities.service.ts
+// ==========================================================
+
+import { Injectable } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+import { CreateOpportunityDto } from './dto/create-opportunity.dto';
+
+@Injectable()
+export class OpportunitiesService {
+  constructor(private prisma: PrismaService) {}
+
+  async findApproved(search?: string, category?: string) {
+    return this.prisma.opportunity.findMany({
+      where: { 
+        status: 'PUBLISHED',
+        ...(search && { title: { contains: search, mode: 'insensitive' } }),
+        ...(category && { category: { equals: category, mode: 'insensitive' } }),
+      },
+      orderBy: { deadline: 'asc' },
+    });
+  }
+
+  async findPending() {
+    return this.prisma.opportunity.findMany({ where: { status: 'PENDING_MODERATION' }, orderBy: { createdAt: 'desc' } });
+  }
+
+  async create(dto: CreateOpportunityDto, userId: string) {
+    return this.prisma.opportunity.create({
+      data: { title: dto.title, description: dto.description, category: dto.category, deadline: new Date(dto.deadline), publisherId: userId, status: 'PENDING_MODERATION' },
+    });
+  }
+
+  async approve(id: string) {
+    return this.prisma.opportunity.update({ where: { id }, data: { status: 'PUBLISHED' } });
+  }
+}
+
+// ==========================================================
+// FILE: C:\Users\athar\CampusHub\apps\api\src\opportunities\dto\create-opportunity.dto.ts
+// ==========================================================
+
+import { IsNotEmpty, IsString, IsDateString } from 'class-validator';
+
+export class CreateOpportunityDto {
+  @IsString()
+  @IsNotEmpty()
+  title: string;
+
+  @IsString()
+  @IsNotEmpty()
+  description: string;
+
+  @IsString()
+  @IsNotEmpty()
+  category: string;
+
+  @IsDateString()
+  deadline: string;
+}
+
+// ==========================================================
+// FILE: C:\Users\athar\CampusHub\apps\api\src\organizations\organizations.controller.ts
+// ==========================================================
+
+import { Controller, Get, Post, Body, Param, UseGuards, Req, Patch, Query } from '@nestjs/common';
+import { OrganizationsService } from './organizations.service';
+import { CreateOrganizationDto } from './dto/create-organization.dto';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { RolesGuard } from '../auth/roles.guard';
+import { Roles } from '../auth/roles.decorator';
+import { PrismaService } from '../prisma/prisma.service';
+import { AuditService } from '../audit/audit.service';
+
+@Controller('organizations')
+export class OrganizationsController {
+  constructor(
+    private readonly organizationsService: OrganizationsService, 
+    private prisma: PrismaService,
+    private audit: AuditService
+  ) {}
+
+  @Get()
+  findAll(@Query('search') search?: string, @Query('category') category?: string) {
+    return this.organizationsService.findAll(search, category);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @Get('admin/all')
+  findAllAdmin() { return this.organizationsService.findAllAdmin(); }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @Get('pending')
+  findPending() { return this.organizationsService.findPending(); }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @Patch(':id/approve')
+  async approve(@Param('id') id: string, @Req() req: any) {
+    const res = await this.organizationsService.approve(id);
+    await this.audit.logAction(req.user.userId, 'APPROVE_ORGANIZATION', id, `Approved club: ${res.name}`);
+    return res;
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @Patch(':id/renew')
+  async renew(@Param('id') id: string, @Req() req: any) {
+    const res = await this.organizationsService.renew(id);
+    await this.audit.logAction(req.user.userId, 'RENEW_ORGANIZATION', id, `Renewed club: ${res.name} until ${res.renewalDate.toLocaleDateString()}`);
+    return res;
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post()
+  create(@Body() dto: CreateOrganizationDto, @Req() req: any) {
+    return this.organizationsService.create(dto, req.user.userId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post(':id/join')
+  join(@Param('id') id: string, @Req() req: any) {
+    return this.organizationsService.join(id, req.user.userId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('my')
+  getMyOrgs(@Req() req: any) {
+    return this.organizationsService.findMyMemberships(req.user.userId);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('FACULTY')
+  @Get('guarded')
+  getGuardedOrgs(@Req() req: any) {
+    return this.organizationsService.findGuardedOrgs(req.user.userId);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @Patch(':id/guardian')
+  async assignGuardian(@Param('id') id: string, @Body('facultyId') facultyId: string) {
+    return this.prisma.organization.update({
+      where: { id }, data: { facultyGuardianId: facultyId },
+    });
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get(':id/members')
+  async getMembers(@Param('id') id: string) {
+    return this.prisma.membership.findMany({
+      where: { organizationId: id, isActive: true },
+      include: { user: { include: { studentProfile: true, facultyProfile: true } } }
+    });
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch('members/:memberId')
+  async updateMemberRole(@Param('memberId') memberId: string, @Body('role') role: any) {
+    return this.prisma.membership.update({ where: { id: memberId }, data: { role: role } });
+  }
+}
+
+// ==========================================================
+// FILE: C:\Users\athar\CampusHub\apps\api\src\organizations\organizations.module.ts
+// ==========================================================
+
+import { Module } from '@nestjs/common';
+import { OrganizationsService } from './organizations.service';
+import { OrganizationsController } from './organizations.controller';
+
+@Module({
+  controllers: [OrganizationsController],
+  providers: [OrganizationsService],
+})
+export class OrganizationsModule {}
+
+// ==========================================================
+// FILE: C:\Users\athar\CampusHub\apps\api\src\organizations\organizations.service.ts
+// ==========================================================
+
+import { Injectable, ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+import { CreateOrganizationDto } from './dto/create-organization.dto';
+
+@Injectable()
+export class OrganizationsService {
+  constructor(private prisma: PrismaService) {}
+
+  async findAll(search?: string, category?: string) {
+    return this.prisma.organization.findMany({
+      where: { 
+        status: 'ACTIVE',
+        ...(search && { name: { contains: search, mode: 'insensitive' } }),
+        ...(category && { category: { equals: category, mode: 'insensitive' } }),
+      },
+    });
+  }
+
+  // FIX: Restored the missing Admin method
+  async findAllAdmin() {
+    return this.prisma.organization.findMany({
+      include: { memberships: true },
+      orderBy: { renewalDate: 'asc' }
+    });
+  }
+
+  async findPending() {
+    return this.prisma.organization.findMany({
+      where: { status: 'PENDING_REVIEW' },
+      include: { memberships: { include: { user: true } } }
+    });
+  }
+
+  async create(dto: CreateOrganizationDto, userId: string) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (user?.globalRole !== 'STUDENT') {
+      throw new ForbiddenException('Only students can create clubs and be assigned as Club Head.');
+    }
+
+    const renewalDate = new Date();
+    renewalDate.setFullYear(renewalDate.getFullYear() + 1);
+    return this.prisma.organization.create({
+      data: {
+        name: dto.name, description: dto.description, category: dto.category, status: 'PENDING_REVIEW',
+        renewalDate: renewalDate,
+        memberships: { create: { userId: userId, role: 'CLUB_HEAD' } },
+      },
+    });
+  }
+
+  async approve(id: string) {
+    return this.prisma.organization.update({ where: { id }, data: { status: 'ACTIVE' } });
+  }
+
+  async renew(id: string) {
+    const org = await this.prisma.organization.findUnique({ where: { id } });
+    if (!org) throw new NotFoundException('Organization not found');
+    const newRenewalDate = new Date(org.renewalDate);
+    newRenewalDate.setFullYear(newRenewalDate.getFullYear() + 1);
+    return this.prisma.organization.update({ where: { id }, data: { renewalDate: newRenewalDate } });
+  }
+
+  async join(orgId: string, userId: string) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (user?.globalRole !== 'STUDENT') {
+      throw new ForbiddenException('Only students can join clubs as members.');
+    }
+
+    const existing = await this.prisma.membership.findUnique({
+      where: { userId_organizationId: { userId, organizationId: orgId } },
+    });
+    if (existing) throw new ConflictException('Already a member');
+    return this.prisma.membership.create({ data: { userId, organizationId: orgId, role: 'MEMBER' } });
+  }
+
+  async findMyMemberships(userId: string) {
+    return this.prisma.membership.findMany({ where: { userId, isActive: true }, include: { organization: true } });
+  }
+
+  async findGuardedOrgs(userId: string) {
+    return this.prisma.organization.findMany({
+      where: { facultyGuardianId: userId, status: 'ACTIVE' },
+      include: { memberships: true }
+    });
+  }
+}
+
+// ==========================================================
+// FILE: C:\Users\athar\CampusHub\apps\api\src\organizations\dto\create-organization.dto.ts
+// ==========================================================
+
+import { IsNotEmpty, IsString } from 'class-validator';
+
+export class CreateOrganizationDto {
+  @IsString()
+  @IsNotEmpty()
+  name: string;
+
+  @IsString()
+  @IsNotEmpty()
+  description: string;
+
+  @IsString()
+  @IsNotEmpty()
+  category: string;
+}
+
+// ==========================================================
+// FILE: C:\Users\athar\CampusHub\apps\api\src\prisma\prisma.module.ts
+// ==========================================================
+
+import { Global, Module } from '@nestjs/common';
+import { PrismaService } from './prisma.service';
+
+@Global()
+@Module({
+  providers: [PrismaService],
+  exports: [PrismaService],
+})
+export class PrismaModule {}
+
+// ==========================================================
+// FILE: C:\Users\athar\CampusHub\apps\api\src\prisma\prisma.service.ts
+// ==========================================================
+
+import { Injectable, OnModuleInit } from '@nestjs/common';
+import { PrismaClient } from '@prisma/client';
+
+@Injectable()
+export class PrismaService extends PrismaClient implements OnModuleInit {
+  async onModuleInit() {
+    await this.$connect();
+  }
+}
+
+// ==========================================================
+// FILE: C:\Users\athar\CampusHub\apps\api\src\recommendations\recommendations.controller.ts
+// ==========================================================
+
+import { Controller, Get, UseGuards, Req } from '@nestjs/common';
+import { RecommendationsService } from './recommendations.service';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+
+@Controller('recommendations')
+export class RecommendationsController {
+  constructor(private readonly recommendationsService: RecommendationsService) {}
+
+  @UseGuards(JwtAuthGuard)
+  @Get()
+  getRecommendations(@Req() req: any) {
+    return this.recommendationsService.getRecommendations(req.user.userId);
+  }
+}
+
+// ==========================================================
+// FILE: C:\Users\athar\CampusHub\apps\api\src\recommendations\recommendations.module.ts
+// ==========================================================
+
+import { Module } from '@nestjs/common';
+import { RecommendationsController } from './recommendations.controller';
+import { RecommendationsService } from './recommendations.service';
+
+@Module({
+  controllers: [RecommendationsController],
+  providers: [RecommendationsService],
+})
+export class RecommendationsModule {}
+
+// ==========================================================
+// FILE: C:\Users\athar\CampusHub\apps\api\src\recommendations\recommendations.service.ts
+// ==========================================================
+
+import { Injectable } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+
+@Injectable()
+export class RecommendationsService {
+  constructor(private prisma: PrismaService) {}
+
+  async getRecommendations(userId: string) {
+    // 1. Get user's skills and interests
+    const profile = await this.prisma.studentProfile.findUnique({
+      where: { userId },
+    });
+
+    if (!profile) return { clubs: [], events: [], opportunities: [] };
+
+    const keywords = [...(profile.skills || []), ...(profile.interests || [])].map(k => k.toLowerCase());
+
+    // If user has no skills/interests, return empty
+    if (keywords.length === 0) return { clubs: [], events: [], opportunities: [] };
+
+    // 2. Fetch all active data
+    const [clubs, events, opportunities] = await Promise.all([
+      this.prisma.organization.findMany({ where: { status: 'ACTIVE' } }),
+      this.prisma.event.findMany({ where: { status: 'PUBLISHED' }, include: { organization: true } }),
+      this.prisma.opportunity.findMany({ where: { status: 'PUBLISHED' } }),
+    ]);
+
+    // 3. Simple Rule-Based Matching Function
+    const isMatch = (text: string) => {
+      if (!text) return false;
+      const lowerText = text.toLowerCase();
+      return keywords.some(kw => lowerText.includes(kw));
+    };
+
+    const matchedClubs = clubs.filter(c => 
+      isMatch(c.name) || isMatch(c.category) || isMatch(c.description)
+    ).slice(0, 3); // Top 3
+
+    const matchedEvents = events.filter(e => 
+      isMatch(e.title) || isMatch(e.description) || (e.organization && isMatch(e.organization.name))
+    ).slice(0, 3); // Top 3
+
+    const matchedOpps = opportunities.filter(o => 
+      isMatch(o.title) || isMatch(o.description) || isMatch(o.category)
+    ).slice(0, 3); // Top 3
+
+    return { clubs: matchedClubs, events: matchedEvents, opportunities: matchedOpps };
+  }
+}
+
+// ==========================================================
+// FILE: C:\Users\athar\CampusHub\apps\api\src\recruitment\recruitment.controller.ts
+// ==========================================================
+
+import { Controller, Get, Post, Body, Param, UseGuards, Req, Patch, ForbiddenException, BadRequestException } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+
+@Controller('recruitment')
+export class RecruitmentController {
+  constructor(private prisma: PrismaService) {}
+
+  @Get()
+  getOpenCycles() {
+    return this.prisma.recruitmentCycle.findMany({
+      where: { status: 'OPEN' },
+      include: { organization: true },
+      orderBy: { createdAt: 'desc' }
+    });
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post()
+  async createCycle(@Req() req: any, @Body() body: any) {
+    const membership = await this.prisma.membership.findUnique({
+      where: { userId_organizationId: { userId: req.user.userId, organizationId: body.organizationId } },
+    });
+    if (!membership || (membership.role !== 'CLUB_HEAD' && membership.role !== 'COMMITTEE_MEMBER')) {
+      throw new ForbiddenException('Only Club Heads can post recruitment notices.');
+    }
+    return this.prisma.recruitmentCycle.create({
+      data: { title: body.title, description: body.description, deadline: new Date(body.deadline), organizationId: body.organizationId }
+    });
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post(':id/apply')
+  async apply(@Param('id') id: string, @Req() req: any, @Body('pitch') pitch: string) {
+    // FLAW FIX: Only Students can apply
+    if (req.user.role !== 'STUDENT') {
+      throw new ForbiddenException('Only students can apply for club recruitment.');
+    }
+
+    const cycle = await this.prisma.recruitmentCycle.findUnique({ where: { id } });
+    if (!cycle) throw new BadRequestException('Cycle not found');
+
+    if (new Date(cycle.deadline) < new Date()) {
+      throw new BadRequestException('The deadline for this recruitment has passed.');
+    }
+
+    const existingMember = await this.prisma.membership.findUnique({
+      where: { userId_organizationId: { userId: req.user.userId, organizationId: cycle.organizationId } }
+    });
+    if (existingMember) {
+      throw new BadRequestException('You are already a member of this club.');
+    }
+
+    return this.prisma.application.create({
+      data: { recruitmentCycleId: id, userId: req.user.userId, pitch },
+      include: { recruitmentCycle: { include: { organization: { include: { memberships: { where: { role: 'CLUB_HEAD' } } } } } } }
+    });
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get(':id/applications')
+  getApplications(@Param('id') id: string) {
+    return this.prisma.application.findMany({
+      where: { recruitmentCycleId: id },
+      include: { user: { include: { studentProfile: true } } }
+    });
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch('applications/:id')
+  async updateAppStatus(@Param('id') id: string, @Body('status') status: string) {
+    return this.prisma.application.update({ where: { id }, data: { status } });
+  }
+}
+
+// ==========================================================
+// FILE: C:\Users\athar\CampusHub\apps\api\src\recruitment\recruitment.module.ts
+// ==========================================================
+
+import { Module } from '@nestjs/common';
+import { RecruitmentController } from './recruitment.controller';
+import { NotificationsModule } from '../notifications/notifications.module';
+
+@Module({
+  imports: [NotificationsModule],
+  controllers: [RecruitmentController],
+})
+export class RecruitmentModule {}
+
+// ==========================================================
+// FILE: C:\Users\athar\CampusHub\apps\api\src\search\search.controller.ts
+// ==========================================================
+
+import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { SearchService } from './search.service';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+
+@Controller('search')
+export class SearchController {
+  constructor(private readonly searchService: SearchService) {}
+
+  @UseGuards(JwtAuthGuard)
+  @Get()
+  search(@Query('q') query: string) {
+    return this.searchService.globalSearch(query);
+  }
+}
+
+// ==========================================================
+// FILE: C:\Users\athar\CampusHub\apps\api\src\search\search.module.ts
+// ==========================================================
+
+import { Module } from '@nestjs/common';
+import { SearchController } from './search.controller';
+import { SearchService } from './search.service';
+
+@Module({
+  controllers: [SearchController],
+  providers: [SearchService],
+})
+export class SearchModule {}
+
+// ==========================================================
+// FILE: C:\Users\athar\CampusHub\apps\api\src\search\search.service.ts
+// ==========================================================
+
+import { Injectable } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+
+@Injectable()
+export class SearchService {
+  constructor(private prisma: PrismaService) {}
+
+  async globalSearch(query: string) {
+    if (!query || query.trim() === '') {
+      return { users: [], organizations: [], events: [], opportunities: [] };
+    }
+
+    const searchString = query.trim();
+
+    const [users, organizations, events, opportunities] = await Promise.all([
+      // Search Users (Name or Email)
+      this.prisma.user.findMany({
+        where: {
+          OR: [
+            { email: { contains: searchString, mode: 'insensitive' } },
+            { studentProfile: { OR: [{ firstName: { contains: searchString, mode: 'insensitive' } }, { lastName: { contains: searchString, mode: 'insensitive' } }] } },
+            { facultyProfile: { OR: [{ firstName: { contains: searchString, mode: 'insensitive' } }, { lastName: { contains: searchString, mode: 'insensitive' } }] } },
+          ],
+        },
+        include: { studentProfile: true, facultyProfile: true },
+        take: 5,
+      }),
+      // Search Organizations
+      this.prisma.organization.findMany({
+        where: { name: { contains: searchString, mode: 'insensitive' }, status: 'ACTIVE' },
+        take: 5,
+      }),
+      // Search Events
+      this.prisma.event.findMany({
+        where: { title: { contains: searchString, mode: 'insensitive' }, status: 'PUBLISHED' },
+        take: 5,
+      }),
+      // Search Opportunities
+      this.prisma.opportunity.findMany({
+        where: { title: { contains: searchString, mode: 'insensitive' }, status: 'PUBLISHED' },
+        take: 5,
+      }),
+    ]);
+
+    // Format users so frontend doesn't need complex logic
+    const formattedUsers = users.map(u => ({
+      id: u.id,
+      name: u.studentProfile ? `${u.studentProfile.firstName} ${u.studentProfile.lastName}` : u.facultyProfile ? `${u.facultyProfile.firstName} ${u.facultyProfile.lastName}` : u.email,
+      email: u.email,
+      role: u.globalRole,
+      avatarUrl: u.avatarUrl,
+    }));
+
+    return { users: formattedUsers, organizations, events, opportunities };
+  }
+}
+
+// ==========================================================
+// FILE: C:\Users\athar\CampusHub\apps\api\src\users\users.controller.ts
+// ==========================================================
+
+import { Controller, Get, Put, Post, Delete, Body, UseGuards, Req, Patch, Param, NotFoundException, UseInterceptors, UploadedFile, UnauthorizedException } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { extname } from 'path';
+import * as argon2 from 'argon2';
+import { PrismaService } from '../prisma/prisma.service';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { RolesGuard } from '../auth/roles.guard';
+import { Roles } from '../auth/roles.decorator';
+import { AuditService } from '../audit/audit.service';
+
+@Controller('users')
+export class UsersController {
+  constructor(private prisma: PrismaService, private audit: AuditService) {}
+
+  @UseGuards(JwtAuthGuard)
+  @Get('profile')
+  async getProfile(@Req() req: any) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: req.user.userId },
+      include: { studentProfile: true, facultyProfile: true }
+    });
+    if (!user) throw new NotFoundException('User not found');
+    const { passwordHash, ...result } = user;
+    return result;
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get(':id/public')
+  async getPublicProfile(@Param('id') id: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id },
+      include: { studentProfile: true, facultyProfile: true, memberships: { include: { organization: true } } }
+    });
+    if (!user) throw new NotFoundException('User not found');
+    return { id: user.id, email: user.email, globalRole: user.globalRole, avatarUrl: user.avatarUrl, studentProfile: user.studentProfile, facultyProfile: user.facultyProfile, memberships: user.memberships };
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Put('profile')
+  async updateProfile(@Req() req: any, @Body() body: any) {
+    if (req.user.role === 'STUDENT') {
+      return this.prisma.studentProfile.update({
+        where: { userId: req.user.userId },
+        data: { bio: body.bio, skills: body.skills, projects: body.projects, interests: body.interests, githubUrl: body.githubUrl, linkedinUrl: body.linkedinUrl }
+      });
+    } else if (req.user.role === 'FACULTY') {
+      return this.prisma.facultyProfile.update({ where: { userId: req.user.userId }, data: { bio: body.bio } });
+    }
+    return { message: 'Admin profile requires no bio updates.' };
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Put('password')
+  async changePassword(@Req() req: any, @Body() body: any) {
+    const user = await this.prisma.user.findUnique({ where: { id: req.user.userId } });
+    if (!user) throw new NotFoundException('User not found');
+    
+    const isValid = await argon2.verify(user.passwordHash, body.oldPassword);
+    if (!isValid) throw new UnauthorizedException('Incorrect current password');
+    
+    const newHash = await argon2.hash(body.newPassword);
+    await this.prisma.user.update({ where: { id: user.id }, data: { passwordHash: newHash } });
+    return { message: 'Password updated successfully' };
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('avatar')
+  @UseInterceptors(FileInterceptor('file', {
+    storage: diskStorage({
+      destination: './uploads',
+      filename: (req, file, cb) => {
+        const randomName = Array(32).fill(null).map(() => (Math.round(Math.random() * 16)).toString(16)).join('');
+        return cb(null, `${randomName}${extname(file.originalname)}`);
+      }
+    })
+  }))
+  async uploadAvatar(@Req() req: any, @UploadedFile() file: Express.Multer.File) {
+    const avatarUrl = `http://localhost:3000/uploads/${file.filename}`;
+    await this.prisma.user.update({ where: { id: req.user.userId }, data: { avatarUrl } });
+    return { avatarUrl };
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete('account')
+  async deleteAccount(@Req() req: any) {
+    const userId = req.user.userId;
+    
+    // Manually clean up relations to avoid foreign key constraint errors
+    await this.prisma.application.deleteMany({ where: { userId } });
+    await this.prisma.membership.deleteMany({ where: { userId } });
+    await this.prisma.eventRegistration.deleteMany({ where: { userId } });
+    await this.prisma.message.deleteMany({ where: { OR: [{ senderId: userId }, { receiverId: userId }] } });
+    await this.prisma.notification.deleteMany({ where: { userId } });
+    await this.prisma.exchangeItem.deleteMany({ where: { userId } });
+    await this.prisma.announcement.deleteMany({ where: { organization: { memberships: { some: { userId, role: 'CLUB_HEAD' } } } } });
+    
+    // Delete profiles
+    await this.prisma.studentProfile.deleteMany({ where: { userId } });
+    await this.prisma.facultyProfile.deleteMany({ where: { userId } });
+    
+    // Finally, delete the user
+    await this.prisma.user.delete({ where: { id: userId } });
+
+    return { message: 'Account deleted successfully' };
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @Get('all')
+  async getAllUsers() {
+    return this.prisma.user.findMany({
+      select: { id: true, email: true, globalRole: true, status: true, avatarUrl: true, createdAt: true, studentProfile: { select: { firstName: true, lastName: true } }, facultyProfile: { select: { firstName: true, lastName: true } } },
+      orderBy: { createdAt: 'desc' }
+    });
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @Patch(':id/status')
+  async updateUserStatus(@Param('id') id: string, @Body('status') status: 'ACTIVE' | 'SUSPENDED', @Req() req: any) {
+    const res = await this.prisma.user.update({ where: { id }, data: { status } });
+    await this.audit.logAction(req.user.userId, 'CHANGE_USER_STATUS', id, `Changed status of ${res.email} to ${status}`);
+    return res;
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @Get('faculty')
+  async getFaculty() {
+    return this.prisma.user.findMany({ where: { globalRole: 'FACULTY' }, include: { facultyProfile: true } });
+  }
+}
+
+
+
+// ==========================================================
+// FILE: C:\Users\athar\CampusHub\apps\api\src\users\users.module.ts
+// ==========================================================
+
+import { Module } from '@nestjs/common';
+import { UsersController } from './users.controller';
+@Module({ controllers: [UsersController] })
+export class UsersModule {}

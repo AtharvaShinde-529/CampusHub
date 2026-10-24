@@ -9,6 +9,7 @@ export class RegisterDto {
   @MinLength(6)
   password: string;
 
+  // FLAW 5 FIX: Only allow STUDENT or FACULTY via public endpoint
   @IsEnum(GlobalRole)
   role: GlobalRole;
 
@@ -22,5 +23,5 @@ export class RegisterDto {
 
   @IsString()
   @IsNotEmpty()
-  identifier: string; // rollNumber for students, designation for faculty
+  identifier: string;
 }

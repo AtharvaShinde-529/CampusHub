@@ -1,4 +1,4 @@
-import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
+import { Injectable, ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateOrganizationDto } from './dto/create-organization.dto';
 
@@ -16,13 +16,7 @@ export class OrganizationsService {
     });
   }
 
-  async findPending() {
-    return this.prisma.organization.findMany({
-      where: { status: 'PENDING_REVIEW' },
-      include: { memberships: { include: { user: true } } }
-    });
-  }
-
+  // FIX: Restored the missing Admin method
   async findAllAdmin() {
     return this.prisma.organization.findMany({
       include: { memberships: true },
@@ -30,11 +24,21 @@ export class OrganizationsService {
     });
   }
 
+  async findPending() {
+    return this.prisma.organization.findMany({
+      where: { status: 'PENDING_REVIEW' },
+      include: { memberships: { include: { user: true } } }
+    });
+  }
+
   async create(dto: CreateOrganizationDto, userId: string) {
-    // Set renewal date to 1 year from now
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (user?.globalRole !== 'STUDENT') {
+      throw new ForbiddenException('Only students can create clubs and be assigned as Club Head.');
+    }
+
     const renewalDate = new Date();
     renewalDate.setFullYear(renewalDate.getFullYear() + 1);
-
     return this.prisma.organization.create({
       data: {
         name: dto.name, description: dto.description, category: dto.category, status: 'PENDING_REVIEW',
@@ -51,17 +55,17 @@ export class OrganizationsService {
   async renew(id: string) {
     const org = await this.prisma.organization.findUnique({ where: { id } });
     if (!org) throw new NotFoundException('Organization not found');
-
     const newRenewalDate = new Date(org.renewalDate);
     newRenewalDate.setFullYear(newRenewalDate.getFullYear() + 1);
-
-    return this.prisma.organization.update({
-      where: { id },
-      data: { renewalDate: newRenewalDate },
-    });
+    return this.prisma.organization.update({ where: { id }, data: { renewalDate: newRenewalDate } });
   }
 
   async join(orgId: string, userId: string) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (user?.globalRole !== 'STUDENT') {
+      throw new ForbiddenException('Only students can join clubs as members.');
+    }
+
     const existing = await this.prisma.membership.findUnique({
       where: { userId_organizationId: { userId, organizationId: orgId } },
     });
@@ -73,6 +77,34 @@ export class OrganizationsService {
     return this.prisma.membership.findMany({ where: { userId, isActive: true }, include: { organization: true } });
   }
 
+  async getOrganizationById(id: string) {
+    return this.prisma.organization.findUnique({
+      where: { id },
+      include: {
+        memberships: {
+          where: { isActive: true },
+          include: { user: { include: { studentProfile: true, facultyProfile: true } } }
+        },
+        events: {
+          where: { status: 'PUBLISHED' },
+          orderBy: { startDate: 'asc' },
+          take: 10
+        },
+        announcements: {
+          orderBy: { createdAt: 'desc' },
+          take: 5
+        },
+        recruitmentCycles: {
+          where: { status: 'OPEN' },
+          orderBy: { createdAt: 'desc' }
+        },
+        facultyGuardian: {
+          include: { facultyProfile: true }
+        }
+      }
+    });
+  }
+
   async findGuardedOrgs(userId: string) {
     return this.prisma.organization.findMany({
       where: { facultyGuardianId: userId, status: 'ACTIVE' },
@@ -80,3 +112,4 @@ export class OrganizationsService {
     });
   }
 }
+

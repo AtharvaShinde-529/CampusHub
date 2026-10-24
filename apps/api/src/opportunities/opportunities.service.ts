@@ -10,6 +10,7 @@ export class OpportunitiesService {
     return this.prisma.opportunity.findMany({
       where: { 
         status: 'PUBLISHED',
+        deadline: { gte: new Date() }, // FLAW 11 FIX
         ...(search && { title: { contains: search, mode: 'insensitive' } }),
         ...(category && { category: { equals: category, mode: 'insensitive' } }),
       },
@@ -31,3 +32,4 @@ export class OpportunitiesService {
     return this.prisma.opportunity.update({ where: { id }, data: { status: 'PUBLISHED' } });
   }
 }
+

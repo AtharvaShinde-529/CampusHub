@@ -1,11 +1,13 @@
 import { Controller, Get, Post, Body, Param, UseGuards, Req, Query, Patch, Delete } from '@nestjs/common';
 import { EventsService } from './events.service';
 import { CreateEventDto } from './dto/create-event.dto';
+import { PrismaService } from '../prisma/prisma.service';
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @Controller('events')
 export class EventsController {
-  constructor(private readonly eventsService: EventsService) {}
+  constructor(private readonly eventsService: EventsService, private prisma: PrismaService) {}
 
   @Get()
   findAll(@Query('search') search?: string, @Query('isFest') isFest?: string) {
@@ -38,6 +40,12 @@ export class EventsController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @Get(':id')
+  getEventById(@Param('id') id: string) {
+    return this.eventsService.getEventById(id);
+  }
+
+  @UseGuards(JwtAuthGuard)
   @Get(':id/attendees')
   getAttendees(@Param('id') id: string) {
     return this.eventsService.getEventAttendees(id);
@@ -45,7 +53,21 @@ export class EventsController {
 
   @UseGuards(JwtAuthGuard)
   @Patch('attendees/:regId')
-  markAttendance(@Param('regId') regId: string, @Body('status') status: string) {
+  async markAttendance(@Param('regId') regId: string, @Body('status') status: string, @Req() req: any) {
+    const reg = await this.prisma.eventRegistration.findUnique({
+      where: { id: regId }, include: { event: true }
+    });
+    if (!reg) throw new BadRequestException('Registration not found');
+
+    // FLAW 8 FIX: Verify requester is CLUB_HEAD of the event's organization
+    const membership = await this.prisma.membership.findUnique({
+      where: { userId_organizationId: { userId: req.user.userId, organizationId: reg.event.organizationId } }
+    });
+    if (!membership || (membership.role !== 'CLUB_HEAD' && membership.role !== 'COMMITTEE_MEMBER')) {
+      throw new ForbiddenException('Only organizers can mark attendance.');
+    }
     return this.eventsService.markAttendance(regId, status);
   }
 }
+
+

@@ -10,4 +10,5 @@ export class CreateEventDto {
   @IsBoolean() @IsOptional() isFest?: boolean;
   @IsString() @IsOptional() parentEventId?: string;
   @IsNumber() @IsOptional() maxCapacity?: number;
+  @IsString() @IsOptional() venue?: string;
 }

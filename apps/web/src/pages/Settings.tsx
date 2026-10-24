@@ -2,18 +2,22 @@
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api/axios';
 import Navbar from '../components/Navbar';
-import { Moon, Sun, Camera, Save, ArrowLeft, ShieldAlert, Key } from 'lucide-react';
+import { Moon, Sun, Camera, Save, ArrowLeft, ShieldAlert, Key, Globe, ExternalLink } from 'lucide-react';
 
 export default function Settings() {
   const [profile, setProfile] = useState<any>(null);
   const [bio, setBio] = useState('');
   const [skills, setSkills] = useState('');
   const [projects, setProjects] = useState('');
+  const [githubUrl, setGithubUrl] = useState('');
+  const [linkedinUrl, setLinkedinUrl] = useState('');
+  
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   
   const [isDark, setIsDark] = useState(() => localStorage.getItem('theme') === 'dark');
   const [uploading, setUploading] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   
   const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem('user') || '{}');
@@ -37,12 +41,11 @@ export default function Settings() {
         if (res.data.studentProfile) {
           setSkills(p.skills?.join(', ') || '');
           setProjects(p.projects?.join(', ') || '');
+          setGithubUrl(p.githubUrl || '');
+          setLinkedinUrl(p.linkedinUrl || '');
         }
       }
-    }).catch(err => {
-      console.error(err);
-      navigate('/dashboard');
-    });
+    }).catch(err => navigate('/dashboard'));
   }, [navigate]);
 
   const handleSaveProfile = async (e: React.FormEvent) => {
@@ -52,7 +55,9 @@ export default function Settings() {
         bio,
         skills: skills.split(',').map(s => s.trim()).filter(Boolean),
         projects: projects.split(',').map(p => p.trim()).filter(Boolean),
-        interests: []
+        interests: [],
+        githubUrl,
+        linkedinUrl
       });
       alert('Profile updated successfully!');
     } catch (err) {
@@ -78,14 +83,10 @@ export default function Settings() {
     setUploading(true);
 
     try {
-      const res = await api.post('/users/avatar', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
-      
+      const res = await api.post('/users/avatar', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
       const updatedUser = { ...user, avatarUrl: res.data.avatarUrl };
       localStorage.setItem('user', JSON.stringify(updatedUser));
       setProfile({ ...profile, avatarUrl: res.data.avatarUrl });
-      alert('Profile picture updated!');
       window.dispatchEvent(new Event('userUpdated')); 
     } catch (err) {
       alert('Failed to upload image');
@@ -94,14 +95,29 @@ export default function Settings() {
     }
   };
 
+  const handleDeleteAccount = async () => {
+    const confirm1 = confirm('Are you sure you want to delete your account? This action CANNOT be undone.');
+    if (!confirm1) return;
+    const confirm2 = prompt('Type DELETE to confirm:');
+    if (confirm2 !== 'DELETE') return alert('Account deletion cancelled.');
+
+    setDeleting(true);
+    try {
+      await api.delete('/users/account');
+      alert('Account deleted successfully. Logging out...');
+      localStorage.clear();
+      navigate('/login');
+    } catch (err) {
+      alert('Failed to delete account');
+      setDeleting(false);
+    }
+  };
+
   if (!profile) return <div className="min-h-screen bg-surface-50 dark:bg-slate-900 flex justify-center items-center text-xl font-bold dark:text-white">Loading Settings...</div>;
 
   let name = 'System Admin';
-  if (profile.studentProfile) {
-    name = `${profile.studentProfile.firstName} ${profile.studentProfile.lastName}`;
-  } else if (profile.facultyProfile) {
-    name = `${profile.facultyProfile.firstName} ${profile.facultyProfile.lastName}`;
-  }
+  if (profile.studentProfile) name = `${profile.studentProfile.firstName} ${profile.studentProfile.lastName}`;
+  else if (profile.facultyProfile) name = `${profile.facultyProfile.firstName} ${profile.facultyProfile.lastName}`;
 
   return (
     <div className="min-h-screen bg-surface-50 dark:bg-slate-900 pb-12">
@@ -133,9 +149,7 @@ export default function Settings() {
               </div>
               <h2 className="text-xl font-bold text-slate-800 dark:text-white">{name}</h2>
               <p className="text-sm text-slate-500 dark:text-slate-400">{profile.email}</p>
-              <span className="inline-block mt-2 px-3 py-1 bg-brand-50 text-brand-700 dark:bg-brand-900/30 dark:text-brand-400 text-xs font-bold rounded-full">
-                {profile.globalRole}
-              </span>
+              <span className="inline-block mt-2 px-3 py-1 bg-brand-50 text-brand-700 dark:bg-brand-900/30 dark:text-brand-400 text-xs font-bold rounded-full">{profile.globalRole}</span>
             </div>
 
             <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-700 flex justify-between items-center">
@@ -156,7 +170,7 @@ export default function Settings() {
                 <form onSubmit={handleSaveProfile} className="space-y-5">
                   <div>
                     <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Bio</label>
-                    <textarea rows={4} className="w-full border border-slate-300 dark:border-slate-600 p-3 rounded-xl bg-slate-50 dark:bg-slate-700 focus:ring-2 focus:ring-brand-500 outline-none transition" value={bio} onChange={e => setBio(e.target.value)} placeholder="Tell us about yourself..." />
+                    <textarea rows={3} className="w-full border border-slate-300 dark:border-slate-600 p-3 rounded-xl bg-slate-50 dark:bg-slate-700 focus:ring-2 focus:ring-brand-500 outline-none transition" value={bio} onChange={e => setBio(e.target.value)} placeholder="Tell us about yourself..." />
                   </div>
 
                   {profile.globalRole === 'STUDENT' && (
@@ -168,6 +182,16 @@ export default function Settings() {
                       <div>
                         <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Projects (comma separated)</label>
                         <input className="w-full border border-slate-300 dark:border-slate-600 p-3 rounded-xl bg-slate-50 dark:bg-slate-700 focus:ring-2 focus:ring-brand-500 outline-none transition" value={projects} onChange={e => setProjects(e.target.value)} placeholder="CampusHub, Portfolio Website" />
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2 flex items-center gap-2"><Globe size={16}/> Portfolio / GitHub URL</label>
+                          <input className="w-full border border-slate-300 dark:border-slate-600 p-3 rounded-xl bg-slate-50 dark:bg-slate-700 focus:ring-2 focus:ring-brand-500 outline-none transition" value={githubUrl} onChange={e => setGithubUrl(e.target.value)} placeholder="https://github.com/username" />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2 flex items-center gap-2"><ExternalLink size={16}/> LinkedIn URL</label>
+                          <input className="w-full border border-slate-300 dark:border-slate-600 p-3 rounded-xl bg-slate-50 dark:bg-slate-700 focus:ring-2 focus:ring-brand-500 outline-none transition" value={linkedinUrl} onChange={e => setLinkedinUrl(e.target.value)} placeholder="https://linkedin.com/in/username" />
+                        </div>
                       </div>
                     </>
                   )}
@@ -185,7 +209,6 @@ export default function Settings() {
               </div>
             )}
 
-            {/* Password Form */}
             <div className="bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-700">
               <h2 className="text-2xl font-bold text-slate-800 dark:text-white mb-6 flex items-center gap-2"><Key size={24} className="text-brand-600"/> Change Password</h2>
               <form onSubmit={handlePasswordChange} className="space-y-5">
@@ -202,8 +225,15 @@ export default function Settings() {
                 </button>
               </form>
             </div>
+            {/* Danger Zone */}
+            <div className="bg-red-50 dark:bg-red-900/10 p-8 rounded-3xl shadow-sm border border-red-200 dark:border-red-900/50 mt-6">
+              <h2 className="text-2xl font-bold text-red-600 dark:text-red-400 mb-2">Danger Zone</h2>
+              <p className="text-sm text-red-500 dark:text-red-300 mb-6">Once you delete your account, there is no going back. Please be certain.</p>
+              <button onClick={handleDeleteAccount} disabled={deleting} className="bg-red-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-red-700 transition shadow-md disabled:opacity-50">
+                {deleting ? 'Deleting...' : 'Delete Account Permanently'}
+              </button>
+            </div>
           </div>
-
         </div>
       </div>
     </div>

@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -6,7 +6,6 @@ export class MessagesService {
   constructor(private prisma: PrismaService) {}
 
   async getConversations(userId: string) {
-    // Find all unique users the current user has chatted with
     const messages = await this.prisma.message.findMany({
       where: { OR: [{ senderId: userId }, { receiverId: userId }] },
       orderBy: { createdAt: 'desc' },
@@ -42,8 +41,17 @@ export class MessagesService {
   }
 
   async sendMessage(senderId: string, receiverId: string, content: string) {
+    // FLAW FIX: Cannot message yourself
+    if (senderId === receiverId) {
+      throw new BadRequestException('You cannot send a message to yourself.');
+    }
+    // FLAW 12 FIX: Check if receiver exists
+    const receiver = await this.prisma.user.findUnique({ where: { id: receiverId } });
+    if (!receiver) throw new NotFoundException('Receiver does not exist.');
+
     return this.prisma.message.create({
       data: { senderId, receiverId, content },
     });
   }
 }
+

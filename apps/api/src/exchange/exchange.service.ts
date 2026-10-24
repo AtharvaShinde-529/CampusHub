@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -18,16 +18,18 @@ export class ExchangeService {
 
   async create(data: any, userId: string) {
     return this.prisma.exchangeItem.create({
-      data: {
-        title: data.title,
-        description: data.description,
-        type: data.type,
-        userId: userId,
-      },
+      data: { title: data.title, description: data.description, type: data.type, userId: userId },
     });
   }
 
-  async updateStatus(id: string, status: string) {
+  async updateStatus(id: string, status: string, userId: string) {
+    // FLAW FIX: Only the creator can update the status
+    const item = await this.prisma.exchangeItem.findUnique({ where: { id } });
+    if (!item) throw new NotFoundException('Item not found');
+    if (item.userId !== userId) {
+      throw new ForbiddenException('You can only update your own listings.');
+    }
+
     return this.prisma.exchangeItem.update({
       where: { id },
       data: { status },
