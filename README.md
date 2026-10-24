@@ -1,77 +1,112 @@
-﻿# 🎓 CampusHub
+﻿# \# 🎓 CampusHub
 
-**A Unified Campus Engagement, Opportunities and Student Participation Platform.**
+# 
 
-CampusHub is a full-stack, role-aware web application designed to eliminate the fragmentation of campus activities, clubs, events, and external opportunities. It provides a centralized digital environment for students, faculty, and administrators to connect, discover, and participate in campus life.
+# \*\*A Unified Campus Engagement, Opportunities and Student Participation Platform.\*\*
 
-## 🚀 Features
+# 
 
-- **Role-Based Access Control (RBAC):** Distinct dashboards and permissions for Admins, Faculty, Club Heads, Committee Members, and Students.
-- **Unified Campus Feed:** A central dashboard aggregating upcoming events, external opportunities, and joined clubs.
-- **Organizations & Clubs:** Discover, join, and manage clubs. Admin approval is required for new clubs.
-- **Recruitment Workflows:** Club Heads can post recruitment notices, and students can apply directly through the platform.
-- **Event & Fest Management:** Create standalone events or link them to larger fests. Students can register with one click.
-- **External Opportunities:** Faculty and Admin can post hackathons/workshops which go through an Admin moderation queue before going live.
-- **Faculty Mentorship:** Admins can assign Faculty Guardians to specific clubs, unlocking dedicated mentor dashboards.
-- **In-App Notifications:** Real-time alerts for application updates and new recruitment postings.
-- **Campus Exchange:** A Lost & Found / Buy & Sell board for students.
-- **Admin Analytics:** Live metrics on total students, faculty, active clubs, and pending approvals.
+# CampusHub is a full-stack, role-aware web application designed to eliminate the fragmentation of campus activities, clubs, events, and external opportunities. It provides a centralized digital environment for students, faculty, and administrators to connect, discover, and participate in campus life.
 
-## 🛠️ Technology Stack
+# 
 
-- **Frontend:** React 19, Vite, TypeScript, Tailwind CSS, React Router, Axios, Lucide Icons.
-- **Backend:** NestJS, TypeScript, Passport.js (JWT), Argon2 (Password Hashing).
-- **Database:** PostgreSQL, Prisma ORM.
-- **Monorepo Management:** pnpm Workspaces.
+# \## 🚀 Features
 
-## ⚙️ Local Setup
+# 
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/AtharvaShinde-529/CampusHub.git
-   cd CampusHub
-   ```
+# \### 🎭 Role-Based Access Control (RBAC)
 
-2. Install dependencies (at the root):
-   ```bash
-   pnpm install
-   ```
+# \- Distinct dashboards and permissions for \*\*Admins, Faculty, Club Heads, Committee Members, and Students\*\*.
 
-3. Set up the `.env` file in `apps/api`:
-   ```env
-   DATABASE_URL="postgresql://postgres:postgres@localhost:5432/campushub?schema=public"
-   JWT_SECRET="super-secret-change-this-in-production"
-   JWT_EXPIRES_IN="15m"
-   ```
+# \- Secure JWT-based authentication with Argon2 password hashing.
 
-4. Push the database schema:
-   ```bash
-   cd apps/api
-   pnpm dlx prisma@5.22.0 db push
-   ```
+# \- Admins can suspend or reactivate any account.
 
-5. Seed the database (creates 100 students, 10 faculty, and 20 clubs):
-   ```bash
-   pnpm dlx prisma@5.22.0 db seed
-   ```
+# 
 
-6. Start the Backend:
-   ```bash
-   pnpm run start:dev
-   ```
+# \### 🏢 Unified Club Management
 
-7. Start the Frontend (in a new terminal):
-   ```bash
-   cd apps/web
-   pnpm run dev
-   ```
+# \- Discover and join technical, cultural, and sports clubs.
 
-## 🔐 Test Credentials (after seeding)
+# \- \*\*Admin Approvals:\*\* New clubs require Admin approval before going live.
 
-- **Admin:** `admin@campushub.com` / `password123`
-- **Faculty:** `Aarav@campushub.com` / `Aarav123`
-- **Student (Club Head):** `Shaurya@campushub.com` / `Shaurya123`
-- **Student (Member):** `Ananya@campushub.com` / `Ananya123`
+# \- \*\*Organization Lifecycle:\*\* Admins can manage annual club renewals and monitor expiry dates.
 
-## 📌 Project Status
-Completed Stages 1 through 10, fulfilling all requirements defined in the Software Requirements Specification (SRS).
+# \- \*\*Club Announcements:\*\* Club Heads can broadcast messages to all members, triggering in-app notifications.
+
+# \- \*\*Public Profiles:\*\* View detailed profiles including skills, projects, and club memberships.
+
+# 
+
+# \### 📅 Events \& Fests
+
+# \- Create standalone events or link them to larger Fests.
+
+# \- Students can register for events with one click.
+
+# \- \*\*Attendee Management:\*\* Club Heads can view registered students and check them in.
+
+# \- \*\*Interactive Calendar:\*\* Visual calendar view of all campus events.
+
+# 
+
+# \### 💼 Recruitment \& Opportunities
+
+# \- \*\*Recruitment Workflows:\*\* Club Heads post notices, and students apply with a pitch.
+
+# \- \*\*External Opportunities:\*\* Faculty and Admin can post hackathons/workshops which go through an Admin moderation queue.
+
+# \- \*\*In-App Messaging:\*\* Direct chat system between students and club heads (with 3-second polling).
+
+# 
+
+# \### ⚡ Admin Analytics \& Governance
+
+# \- \*\*Recharts Dashboard:\*\* Visual pie and bar charts showing user distribution and platform activity.
+
+# \- \*\*Audit Logs:\*\* Immutable history of all governance actions (approvals, suspensions, renewals).
+
+# \- \*\*CSV Export:\*\* Download user data directly to a spreadsheet.
+
+# \- \*\*Global Search:\*\* Search for users, clubs, events, and opportunities instantly from the navbar.
+
+# 
+
+# \### 🎨 UI/UX Excellence
+
+# \- Stunning animated \*\*Landing Page\*\*.
+
+# \- \*\*Dark Mode\*\* support across the entire application.
+
+# \- Glassmorphism design with animated background blobs.
+
+# \- Fully responsive and accessible.
+
+# 
+
+# \## 🛠️ Technology Stack
+
+# 
+
+# \- \*\*Frontend:\*\* React 19, Vite, TypeScript, Tailwind CSS, React Router, Axios, Lucide Icons, \*\*Framer Motion\*\* (Animations), \*\*Recharts\*\* (Analytics Charts).
+
+# \- \*\*Backend:\*\* NestJS, TypeScript, Passport.js (JWT), Argon2 (Password Hashing), \*\*Multer\*\* (File Uploads).
+
+# \- \*\*Database:\*\* PostgreSQL, Prisma ORM.
+
+# \- \*\*Monorepo Management:\*\* pnpm Workspaces.
+
+# 
+
+# \## ⚙️ Local Setup
+
+# 
+
+# 1\. Clone the repository:
+
+# &#x20;  ```bash
+
+# &#x20;  git clone https://github.com/AtharvaShinde-529/CampusHub.git
+
+# &#x20;  cd CampusHub
+
