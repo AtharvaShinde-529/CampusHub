@@ -208,17 +208,8 @@ CampusHub/
 
 ---
 
-## 🎓 Academic Context
-
-This project was developed as a final-year academic submission.
-
-- **Institution:** Vishwakarma Institute of Technology (VIT), Pune
-- **Department:** Computer Science and Engineering
-- **Project Guide:** Dr. Rahul Diwate
-
 **Developers:**
 - **Atharva Shinde** - [atharva.shinde24@vit.edu](mailto:atharva.shinde24@vit.edu)
-- **Tanay Lathi** - [tanay.lathi24@vit.edu](mailto:tanay.lathi24@vit.edu)
 
 ### Project Status
 ✅ Completed **Stages 1 through 11**. Fulfilled all requirements defined in the Software Requirements Specification (SRS). Fully functional MVP ready for evaluation.
