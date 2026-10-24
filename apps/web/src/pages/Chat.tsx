@@ -2,7 +2,10 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../api/axios';
 import Navbar from '../components/Navbar';
-import { Send, User as UserIcon, MessageSquare } from 'lucide-react';
+import { Send, MessageSquare } from 'lucide-react';
+import { io } from 'socket.io-client';
+
+const socket = io('http://localhost:3000');
 
 export default function Chat() {
   const { userId } = useParams();
@@ -18,13 +21,26 @@ export default function Chat() {
 
   useEffect(() => {
     fetchConversations();
-  }, []);
+
+    // Listen for incoming WebSocket messages
+    socket.on('newMessage', (msg: any) => {
+      // If the message belongs to the current open chat, append it
+      if ((msg.senderId === currentUser.id && msg.receiverId === userId) || 
+          (msg.senderId === userId && msg.receiverId === currentUser.id)) {
+        setMessages((prev) => [...prev, msg]);
+      }
+      // Refresh conversation list to show latest message
+      fetchConversations();
+    });
+
+    return () => {
+      socket.off('newMessage');
+    };
+  }, [userId, currentUser.id]);
 
   useEffect(() => {
     if (userId) {
       fetchMessages(userId);
-      const interval = setInterval(() => fetchMessages(userId), 3000); // Polling every 3 seconds
-      return () => clearInterval(interval);
     }
   }, [userId]);
 
@@ -41,26 +57,23 @@ export default function Chat() {
     const res = await api.get(`/messages/${otherId}`);
     setMessages(res.data);
     
-    // Find active user details from conversations
     const active = conversations.find(c => c.id === otherId);
     if (active) setActiveUser(active);
-    else {
-      // If not in conversations, fetch user profile
-      const userRes = await api.get('/users/profile'); // Ideally we fetch the other user's profile
-      setActiveUser({ id: otherId, email: 'User', avatarUrl: null });
-    }
+    else setActiveUser({ id: otherId, email: 'User', avatarUrl: null });
   };
 
-  const handleSend = async (e: React.FormEvent) => {
+  const handleSend = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMessage.trim() || !userId) return;
 
-    try {
-      await api.post('/messages', { receiverId: userId, content: newMessage });
-      setNewMessage('');
-      fetchMessages(userId);
-      fetchConversations();
-    } catch (err) { console.error(err); }
+    // Emit to WebSocket instead of REST API
+    socket.emit('sendMessage', {
+      senderId: currentUser.id,
+      receiverId: userId,
+      content: newMessage
+    });
+    
+    setNewMessage('');
   };
 
   return (
@@ -122,11 +135,11 @@ export default function Chat() {
                   {messages.map((msg, index) => {
                     const isMine = msg.senderId === currentUser.id;
                     return (
-                      <div key={msg.id} className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
+                      <div key={index} className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
                         <div className={`max-w-[70%] p-3 rounded-2xl ${isMine ? 'bg-brand-600 text-white rounded-tr-none' : 'bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-white rounded-tl-none'}`}>
                           <p className="text-sm">{msg.content}</p>
                           <p className={`text-[10px] mt-1 text-right ${isMine ? 'text-brand-200' : 'text-slate-400'}`}>
-                            {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            {new Date(msg.createdAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </p>
                         </div>
                       </div>
