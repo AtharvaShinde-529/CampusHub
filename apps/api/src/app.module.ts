@@ -11,13 +11,21 @@ import { RecruitmentModule } from './recruitment/recruitment.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { ExchangeModule } from './exchange/exchange.module';
+import { MessagesModule } from './messages/messages.module';
+import { SearchModule } from './search/search.module';
+import { AuditModule } from './audit/audit.module';
+import { AnnouncementsModule } from './announcements/announcements.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     PrismaModule, AuthModule, OrganizationsModule, EventsModule,
     OpportunitiesModule, FeedModule, UsersModule, RecruitmentModule,
-    AnalyticsModule, NotificationsModule, ExchangeModule,
+    AnalyticsModule, NotificationsModule, ExchangeModule, MessagesModule, SearchModule, AuditModule, AnnouncementsModule,
   ],
 })
 export class AppModule {}
+
+
+
+

@@ -1,3 +1,40 @@
+﻿@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-surface-50 text-slate-800 font-sans antialiased transition-colors duration-300;
+  }
+}
+
+/* GLOBAL DARK MODE OVERRIDES */
+.dark body { @apply bg-slate-900 text-slate-100; }
+.dark .bg-white, .dark .bg-white\/80, .dark .bg-white\/70 { @apply bg-slate-800/90 text-slate-100 border-slate-700; }
+.dark .bg-gray-50, .dark .bg-gray-100, .dark .bg-surface-50 { @apply bg-slate-900 border-slate-800; }
+.dark .bg-slate-50 { @apply bg-slate-800; }
+.dark .text-slate-800, .dark .text-slate-900, .dark .text-gray-800 { @apply text-white; }
+.dark .text-slate-600, .dark .text-slate-500, .dark .text-gray-600 { @apply text-slate-300; }
+.dark .border-gray-100, .dark .border-gray-200, .dark .border-slate-100, .dark .border-slate-200 { @apply border-slate-700; }
+.dark input, .dark select, .dark textarea { @apply bg-slate-700 border-slate-600 text-white placeholder-slate-400; }
+.dark .shadow-sm, .dark .shadow-md, .dark .shadow-xl { @apply shadow-black/50; }
+
+/* Custom Scrollbar */
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { @apply bg-slate-300 rounded-full hover:bg-slate-400; }
+.dark ::-webkit-scrollbar-thumb { @apply bg-slate-600; }
+
+/* Glassmorphism utility */
+.glass { @apply bg-white/70 dark:bg-slate-800/80 backdrop-blur-md border border-white/20 dark:border-slate-700/50 shadow-sm transition-all duration-300; }
+
+/* Print Styles */
+@media print {
+  nav, button, .no-print { display: none !important; }
+  body { background: white !important; color: black !important; }
+  .glass { border: none !important; box-shadow: none !important; background: transparent !important; }
+  table { width: 100% !important; border-collapse: collapse !important; }
+  th, td { border: 1px solid #ccc !important; padding: 8px !important; color: black !important; }
+}

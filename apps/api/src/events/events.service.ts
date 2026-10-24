@@ -6,9 +6,13 @@ import { CreateEventDto } from './dto/create-event.dto';
 export class EventsService {
   constructor(private prisma: PrismaService) {}
 
-  async findAll() {
+  async findAll(search?: string, isFest?: boolean) {
     return this.prisma.event.findMany({
-      where: { status: 'PUBLISHED' },
+      where: { 
+        status: 'PUBLISHED',
+        ...(search && { title: { contains: search, mode: 'insensitive' } }),
+        ...(isFest !== undefined && { isFest: isFest }),
+      },
       include: { organization: true },
       orderBy: { startDate: 'asc' },
     });
@@ -20,19 +24,13 @@ export class EventsService {
     });
 
     if (!membership || (membership.role !== 'CLUB_HEAD' && membership.role !== 'COMMITTEE_MEMBER')) {
-      throw new ForbiddenException('Only Club Heads or Committee Members can create events');
+      throw new ForbiddenException('Only Club Heads can create events');
     }
 
     return this.prisma.event.create({
       data: {
-        title: dto.title,
-        description: dto.description,
-        startDate: new Date(dto.startDate),
-        endDate: new Date(dto.endDate),
-        organizationId: dto.organizationId,
-        status: 'PUBLISHED',
-        isFest: dto.isFest || false,
-        parentEventId: dto.parentEventId || null,
+        title: dto.title, description: dto.description, startDate: new Date(dto.startDate), endDate: new Date(dto.endDate),
+        organizationId: dto.organizationId, status: 'PUBLISHED', isFest: dto.isFest || false, parentEventId: dto.parentEventId || null,
       },
     });
   }
@@ -52,6 +50,21 @@ export class EventsService {
     return this.prisma.eventRegistration.findMany({
       where: { userId },
       include: { event: { include: { organization: true } } },
+    });
+  }
+
+  async getEventAttendees(eventId: string) {
+    return this.prisma.eventRegistration.findMany({
+      where: { eventId },
+      include: { user: { include: { studentProfile: true } } },
+      orderBy: { user: { studentProfile: { firstName: 'asc' } } }
+    });
+  }
+
+  async markAttendance(registrationId: string, status: string) {
+    return this.prisma.eventRegistration.update({
+      where: { id: registrationId },
+      data: { status }
     });
   }
 }

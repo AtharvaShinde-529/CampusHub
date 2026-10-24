@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+﻿import { useState, useEffect } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import { api } from '../api/axios';
 
 export default function Recruitment() {
@@ -146,7 +146,7 @@ export default function Recruitment() {
             {applicants.map(app => (
               <div key={app.id} className="border-b p-4 flex justify-between items-start">
                 <div>
-                  <p className="font-bold">{app.user.studentProfile?.firstName} {app.user.studentProfile?.lastName}</p>
+                  <Link to={/user/} className="font-bold text-brand-600 hover:underline">{app.user.studentProfile?.firstName} {app.user.studentProfile?.lastName}</Link>
                   <p className="text-sm text-gray-600 italic">"{app.pitch}"</p>
                   <p className={`text-xs font-bold mt-1 ${app.status === 'ACCEPTED' ? 'text-green-600' : app.status === 'REJECTED' ? 'text-red-600' : 'text-gray-600'}`}>{app.status}</p>
                 </div>
@@ -163,3 +163,4 @@ export default function Recruitment() {
     </div>
   );
 }
+

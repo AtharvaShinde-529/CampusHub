@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { api } from '../api/axios';
 
@@ -13,7 +13,7 @@ export default function Register() {
     e.preventDefault();
     try {
       await api.post('/auth/register', formData);
-      navigate('/');
+      navigate('/login');
     } catch (err: any) {
       setError(err.response?.data?.message || 'Registration failed');
     }
@@ -47,3 +47,4 @@ export default function Register() {
     </div>
   );
 }
+

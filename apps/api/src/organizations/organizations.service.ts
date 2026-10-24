@@ -1,4 +1,4 @@
-import { Injectable, ConflictException } from '@nestjs/common';
+import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateOrganizationDto } from './dto/create-organization.dto';
 
@@ -23,10 +23,22 @@ export class OrganizationsService {
     });
   }
 
+  async findAllAdmin() {
+    return this.prisma.organization.findMany({
+      include: { memberships: true },
+      orderBy: { renewalDate: 'asc' }
+    });
+  }
+
   async create(dto: CreateOrganizationDto, userId: string) {
+    // Set renewal date to 1 year from now
+    const renewalDate = new Date();
+    renewalDate.setFullYear(renewalDate.getFullYear() + 1);
+
     return this.prisma.organization.create({
       data: {
         name: dto.name, description: dto.description, category: dto.category, status: 'PENDING_REVIEW',
+        renewalDate: renewalDate,
         memberships: { create: { userId: userId, role: 'CLUB_HEAD' } },
       },
     });
@@ -34,6 +46,19 @@ export class OrganizationsService {
 
   async approve(id: string) {
     return this.prisma.organization.update({ where: { id }, data: { status: 'ACTIVE' } });
+  }
+
+  async renew(id: string) {
+    const org = await this.prisma.organization.findUnique({ where: { id } });
+    if (!org) throw new NotFoundException('Organization not found');
+
+    const newRenewalDate = new Date(org.renewalDate);
+    newRenewalDate.setFullYear(newRenewalDate.getFullYear() + 1);
+
+    return this.prisma.organization.update({
+      where: { id },
+      data: { renewalDate: newRenewalDate },
+    });
   }
 
   async join(orgId: string, userId: string) {

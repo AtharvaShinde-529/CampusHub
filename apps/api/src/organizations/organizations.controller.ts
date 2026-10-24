@@ -5,15 +5,25 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditService } from '../audit/audit.service';
 
 @Controller('organizations')
 export class OrganizationsController {
-  constructor(private readonly organizationsService: OrganizationsService, private prisma: PrismaService) {}
+  constructor(
+    private readonly organizationsService: OrganizationsService, 
+    private prisma: PrismaService,
+    private audit: AuditService
+  ) {}
 
   @Get()
   findAll(@Query('search') search?: string, @Query('category') category?: string) {
     return this.organizationsService.findAll(search, category);
   }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @Get('admin/all')
+  findAllAdmin() { return this.organizationsService.findAllAdmin(); }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN')
@@ -23,7 +33,20 @@ export class OrganizationsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN')
   @Patch(':id/approve')
-  approve(@Param('id') id: string) { return this.organizationsService.approve(id); }
+  async approve(@Param('id') id: string, @Req() req: any) {
+    const res = await this.organizationsService.approve(id);
+    await this.audit.logAction(req.user.userId, 'APPROVE_ORGANIZATION', id, `Approved club: ${res.name}`);
+    return res;
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @Patch(':id/renew')
+  async renew(@Param('id') id: string, @Req() req: any) {
+    const res = await this.organizationsService.renew(id);
+    await this.audit.logAction(req.user.userId, 'RENEW_ORGANIZATION', id, `Renewed club: ${res.name} until ${res.renewalDate.toLocaleDateString()}`);
+    return res;
+  }
 
   @UseGuards(JwtAuthGuard)
   @Post()
