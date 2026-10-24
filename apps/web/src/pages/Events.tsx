@@ -2,12 +2,13 @@
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api/axios';
 import Navbar from '../components/Navbar';
-import { Search, Calendar as CalendarIcon, Tag, Users, CheckCircle, X } from 'lucide-react';
+import { Search, Calendar as CalendarIcon, Tag, Users, CheckCircle, X, AlertTriangle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function Events() {
   const [events, setEvents] = useState<any[]>([]);
   const [myClubs, setMyClubs] = useState<any[]>([]);
+  const [myRegistrations, setMyRegistrations] = useState<any[]>([]);
   
   // Form State
   const [title, setTitle] = useState('');
@@ -17,6 +18,7 @@ export default function Events() {
   const [organizationId, setOrganizationId] = useState('');
   const [isFest, setIsFest] = useState(false);
   const [parentEventId, setParentEventId] = useState('');
+  const [maxCapacity, setMaxCapacity] = useState<number | ''>('');
   
   // Filter State
   const [search, setSearch] = useState('');
@@ -32,6 +34,7 @@ export default function Events() {
   useEffect(() => {
     fetchEvents();
     fetchMyClubs();
+    fetchMyRegistrations();
   }, [search, filterFest]);
 
   const fetchEvents = async () => {
@@ -53,24 +56,42 @@ export default function Events() {
     if (headClubs.length > 0) setOrganizationId(headClubs[0].organization.id);
   };
 
+  const fetchMyRegistrations = async () => {
+    const res = await api.get('/events/my');
+    setMyRegistrations(res.data);
+  };
+
   const handleCreateEvent = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       await api.post('/events', { 
         title, description, startDate, endDate, organizationId, 
-        isFest, parentEventId: parentEventId || undefined 
+        isFest, parentEventId: parentEventId || undefined,
+        maxCapacity: maxCapacity ? Number(maxCapacity) : undefined
       });
       alert('Event created!');
-      setTitle(''); setDescription(''); setIsFest(false); setParentEventId('');
+      setTitle(''); setDescription(''); setIsFest(false); setParentEventId(''); setMaxCapacity('');
       fetchEvents();
     } catch (err: any) { alert('Failed to create event'); }
   };
 
   const handleRegister = async (id: string) => {
     try {
-      await api.post(`/events/${id}/register`);
-      alert('Registered successfully!');
+      const res = await api.post(`/events/${id}/register`);
+      alert(res.data.status === 'WAITLISTED' ? 'Event is full. You have been added to the waitlist.' : 'Registered successfully!');
+      fetchMyRegistrations();
+      fetchEvents();
     } catch (err: any) { alert(err.response?.data?.message || 'Failed to register'); }
+  };
+
+  const handleCancel = async (id: string) => {
+    if (!confirm('Are you sure you want to cancel your registration?')) return;
+    try {
+      await api.delete(`/events/${id}/cancel`);
+      alert('Registration cancelled.');
+      fetchMyRegistrations();
+      fetchEvents();
+    } catch (err: any) { alert(err.response?.data?.message || 'Failed to cancel'); }
   };
 
   const loadAttendees = async (event: any) => {
@@ -91,7 +112,6 @@ export default function Events() {
     } catch (err) { alert('Failed to update status'); }
   };
 
-  // Helper to check if the current user manages the event's organization
   const isManager = (orgId: string) => myClubs.some(c => c.organization.id === orgId);
 
   return (
@@ -112,7 +132,6 @@ export default function Events() {
           </button>
         </div>
 
-        {/* Host Event Form */}
         {myClubs.length > 0 && (
           <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-700">
             <h2 className="text-2xl font-bold mb-6 text-slate-800 dark:text-white">Host a New Event / Fest</h2>
@@ -125,7 +144,7 @@ export default function Events() {
               </div>
               <textarea placeholder="Description" required className="w-full p-3 border border-slate-300 dark:border-slate-600 rounded-xl bg-slate-50 dark:bg-slate-700 focus:ring-2 focus:ring-brand-500 outline-none transition" value={description} onChange={e => setDescription(e.target.value)} />
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <label className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-1 block">Start Date</label>
                   <input type="datetime-local" required className="w-full p-3 border border-slate-300 dark:border-slate-600 rounded-xl bg-slate-50 dark:bg-slate-700 focus:ring-2 focus:ring-brand-500 outline-none transition" value={startDate} onChange={e => setStartDate(e.target.value)} />
@@ -133,6 +152,10 @@ export default function Events() {
                 <div>
                   <label className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-1 block">End Date</label>
                   <input type="datetime-local" required className="w-full p-3 border border-slate-300 dark:border-slate-600 rounded-xl bg-slate-50 dark:bg-slate-700 focus:ring-2 focus:ring-brand-500 outline-none transition" value={endDate} onChange={e => setEndDate(e.target.value)} />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-1 block">Max Capacity (Optional)</label>
+                  <input type="number" placeholder="e.g. 50" min="1" className="w-full p-3 border border-slate-300 dark:border-slate-600 rounded-xl bg-slate-50 dark:bg-slate-700 focus:ring-2 focus:ring-brand-500 outline-none transition" value={maxCapacity} onChange={e => setMaxCapacity(e.target.value ? Number(e.target.value) : '')} />
                 </div>
               </div>
 
@@ -171,34 +194,59 @@ export default function Events() {
 
         {/* Event List */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {events.map(event => (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} key={event.id} className={`flex flex-col border p-6 rounded-3xl shadow-sm transition-all hover:shadow-md ${event.isFest ? 'bg-gradient-to-br from-amber-50 to-orange-50 border-amber-200 dark:from-amber-900/20 dark:to-orange-900/20 dark:border-amber-700/50' : 'bg-white border-slate-200 dark:bg-slate-800 dark:border-slate-700'}`}>
-              <div className="flex-1">
-                <div className="flex justify-between items-start mb-2">
-                  <div className="flex items-center gap-2 text-xs font-bold px-2 py-1 rounded bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
-                    <Tag size={12} /> {event.organization?.name}
+          {events.map(event => {
+            // Check if current user is registered
+            const myReg = myRegistrations.find(r => r.eventId === event.id);
+            const registeredCount = event.registrations?.filter((r:any) => r.status === 'REGISTERED').length || 0;
+            const isFull = event.maxCapacity && registeredCount >= event.maxCapacity;
+
+            return (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} key={event.id} className={`flex flex-col border p-6 rounded-3xl shadow-sm transition-all hover:shadow-md ${event.isFest ? 'bg-gradient-to-br from-amber-50 to-orange-50 border-amber-200 dark:from-amber-900/20 dark:to-orange-900/20 dark:border-amber-700/50' : 'bg-white border-slate-200 dark:bg-slate-800 dark:border-slate-700'}`}>
+                <div className="flex-1">
+                  <div className="flex justify-between items-start mb-2">
+                    <div className="flex items-center gap-2 text-xs font-bold px-2 py-1 rounded bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
+                      <Tag size={12} /> {event.organization?.name}
+                    </div>
+                    {event.isFest && <span className="text-xs font-bold px-2 py-1 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-400">🎪 Major Fest</span>}
                   </div>
-                  {event.isFest && <span className="text-xs font-bold px-2 py-1 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-400">🎪 Major Fest</span>}
+                  <h3 className="font-extrabold text-xl text-slate-900 dark:text-white mb-2">{event.title}</h3>
+                  <p className="text-sm text-slate-600 dark:text-slate-400 mb-4 line-clamp-3">{event.description}</p>
                 </div>
-                <h3 className="font-extrabold text-xl text-slate-900 dark:text-white mb-2">{event.title}</h3>
-                <p className="text-sm text-slate-600 dark:text-slate-400 mb-4 line-clamp-3">{event.description}</p>
-              </div>
-              <div className="flex items-center justify-between border-t border-slate-100 dark:border-slate-700 pt-4 mt-4">
-                <div className="flex items-center gap-2 text-sm font-semibold text-slate-500 dark:text-slate-400">
-                  <CalendarIcon size={16} /> {new Date(event.startDate).toLocaleDateString()}
+                <div className="flex flex-col md:flex-row items-center justify-between border-t border-slate-100 dark:border-slate-700 pt-4 mt-4 gap-3 md:gap-0">
+                  <div className="flex items-center gap-4 text-sm font-semibold text-slate-500 dark:text-slate-400">
+                    <div className="flex items-center gap-1">
+                      <CalendarIcon size={16} /> {new Date(event.startDate).toLocaleDateString()}
+                    </div>
+                    {event.maxCapacity && (
+                      <div className={`flex items-center gap-1 ${isFull ? 'text-red-500' : 'text-green-600'}`}>
+                        <Users size={16} /> {registeredCount}/{event.maxCapacity} Spots
+                      </div>
+                    )}
+                  </div>
+                  
+                  {isManager(event.organizationId) ? (
+                    <button onClick={() => loadAttendees(event)} className="w-full md:w-auto bg-slate-800 text-white px-5 py-2 rounded-xl font-bold hover:bg-slate-700 transition shadow-sm text-sm flex items-center justify-center gap-2">
+                      <Users size={16}/> Attendees
+                    </button>
+                  ) : myReg ? (
+                    <div className="flex items-center gap-2 w-full md:w-auto">
+                      <span className={`px-3 py-1 rounded-lg text-xs font-bold ${myReg.status === 'REGISTERED' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                        {myReg.status}
+                      </span>
+                      <button onClick={() => handleCancel(event.id)} className="bg-red-100 text-red-600 px-4 py-2 rounded-xl font-bold hover:bg-red-200 transition text-sm flex-1 md:flex-none">
+                        Cancel
+                      </button>
+                    </div>
+                  ) : (
+                    <button onClick={() => handleRegister(event.id)} className={`w-full md:w-auto px-5 py-2 rounded-xl font-bold transition shadow-sm text-sm flex items-center justify-center gap-2 ${isFull ? 'bg-amber-500 hover:bg-amber-600 text-white' : 'bg-brand-600 hover:bg-brand-500 text-white'}`}>
+                      {isFull ? <AlertTriangle size={16}/> : null}
+                      {isFull ? 'Join Waitlist' : 'Register'}
+                    </button>
+                  )}
                 </div>
-                {isManager(event.organizationId) ? (
-                  <button onClick={() => loadAttendees(event)} className="bg-slate-800 text-white px-5 py-2 rounded-xl font-bold hover:bg-slate-700 transition shadow-sm text-sm flex items-center gap-2">
-                    <Users size={16}/> Attendees
-                  </button>
-                ) : (
-                  <button onClick={() => handleRegister(event.id)} className="bg-brand-600 text-white px-5 py-2 rounded-xl font-bold hover:bg-brand-500 transition shadow-sm text-sm">
-                    Register
-                  </button>
-                )}
-              </div>
-            </motion.div>
-          ))}
+              </motion.div>
+            );
+          })}
           {events.length === 0 && (
             <div className="col-span-2 text-center py-20 bg-white dark:bg-slate-800 rounded-3xl border border-dashed border-slate-300 dark:border-slate-600">
               <CalendarIcon size={48} className="mx-auto text-slate-300 dark:text-slate-600 mb-4" />
@@ -230,6 +278,7 @@ export default function Events() {
                         {reg.user.studentProfile?.firstName} {reg.user.studentProfile?.lastName}
                       </p>
                       <p className="text-sm text-slate-500 dark:text-slate-400">{reg.user.email}</p>
+                      <p className="text-xs font-bold mt-1 text-brand-600">{reg.status}</p>
                     </div>
                     <button 
                       onClick={() => markAttendance(reg.id, reg.status)}

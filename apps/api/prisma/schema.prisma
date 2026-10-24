@@ -148,7 +148,8 @@ model Event {
   organizationId String
   status         String   @default("DRAFT")
   isFest         Boolean  @default(false)
-  parentEventId  String?  
+  parentEventId  String?
+  maxCapacity    Int?  
   organization   Organization      @relation(fields: [organizationId], references: [id])
   registrations  EventRegistration[]
 }
@@ -226,4 +227,5 @@ model Announcement {
   createdAt      DateTime     @default(now())
   organization   Organization @relation(fields: [organizationId], references: [id])
 }
+
 

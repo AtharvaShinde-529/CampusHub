@@ -15,16 +15,18 @@ import { MessagesModule } from './messages/messages.module';
 import { SearchModule } from './search/search.module';
 import { AuditModule } from './audit/audit.module';
 import { AnnouncementsModule } from './announcements/announcements.module';
+import { RecommendationsModule } from './recommendations/recommendations.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     PrismaModule, AuthModule, OrganizationsModule, EventsModule,
     OpportunitiesModule, FeedModule, UsersModule, RecruitmentModule,
-    AnalyticsModule, NotificationsModule, ExchangeModule, MessagesModule, SearchModule, AuditModule, AnnouncementsModule,
+    AnalyticsModule, NotificationsModule, ExchangeModule, MessagesModule, SearchModule, AuditModule, AnnouncementsModule, RecommendationsModule,
   ],
 })
 export class AppModule {}
+
 
 
 
