@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { api } from '../api/axios';
 import Navbar from '../components/Navbar';
@@ -37,7 +37,7 @@ export default function Recruitment() {
   const handleCloseCycle = async (id: string) => {
     if (!confirm('Are you sure you want to close this recruitment cycle?')) return;
     try {
-      await api.patch(/recruitment//close);
+      await api.patch(`/recruitment/${id}/close`);
       alert('Cycle closed.');
       fetchCycles();
     } catch (err: any) { alert('Failed to close'); }
@@ -168,3 +168,5 @@ export default function Recruitment() {
     </div>
   );
 }
+
+

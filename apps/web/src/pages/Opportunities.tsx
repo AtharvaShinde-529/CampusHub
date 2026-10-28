@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api/axios';
 
@@ -56,7 +56,7 @@ export default function Opportunities() {
   const handleReject = async (id: string) => {
     if (!confirm('Reject this opportunity?')) return;
     try {
-      await api.patch(/opportunities//reject);
+      await api.patch(`/opportunities/${id}/reject`);
       fetchPending();
     } catch (err) { alert('Failed to reject'); }
   };
@@ -149,4 +149,6 @@ export default function Opportunities() {
     </div>
   );
 }
+
+
 
