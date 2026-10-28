@@ -1,4 +1,5 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import { ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api/axios';
 import Navbar from '../components/Navbar';
@@ -57,7 +58,7 @@ export default function AdminApprovals() {
                 <div className="flex justify-between items-center mb-2">
                   <div>
                     <h3 className="font-bold text-lg text-yellow-800">{org.name}</h3>
-                    <p className="text-sm text-gray-600 mb-1">{org.category} • Created by {org.memberships[0]?.user.email}</p>
+                    <p className="text-sm text-gray-600 mb-1">{org.category} � Created by {org.memberships[0]?.user.email}</p>
                     <p className="text-gray-700">{org.description}</p>
                   </div>
                   <button onClick={() => handleApprove(org.id)} className="bg-green-600 text-white px-4 py-2 rounded font-bold hover:bg-green-700">Approve</button>

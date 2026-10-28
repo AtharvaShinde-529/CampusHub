@@ -32,7 +32,7 @@ export default function AdminOrganizations() {
     const today = new Date();
     const diffTime = renewal.getTime() - today.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays < 30; // Expiring within 30 days
+    return diffDays < 30;
   };
 
   return (

@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { api } from '../api/axios';
 import Navbar from '../components/Navbar';
@@ -32,6 +32,15 @@ export default function Recruitment() {
     const heads = res.data.filter((m: any) => m.role === 'CLUB_HEAD' || m.role === 'COMMITTEE_MEMBER');
     setMyClubs(heads);
     if (heads.length > 0) setOrgId(heads[0].organization.id);
+  };
+
+  const handleCloseCycle = async (id: string) => {
+    if (!confirm('Are you sure you want to close this recruitment cycle?')) return;
+    try {
+      await api.patch(/recruitment//close);
+      alert('Cycle closed.');
+      fetchCycles();
+    } catch (err: any) { alert('Failed to close'); }
   };
 
   const handleCreate = async (e: React.FormEvent) => {
@@ -121,6 +130,9 @@ export default function Recruitment() {
                     <button onClick={() => handleApply(cycle.id)} className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700 transition">Apply</button>
                   )}
                   <button onClick={() => loadApplicants(cycle.id)} className="bg-gray-800 dark:bg-slate-700 text-white px-4 py-2 rounded text-sm hover:bg-gray-900 dark:hover:bg-slate-600 transition">View Applicants</button>
+                  {myClubs.some(c => c.organization.id === cycle.organizationId) && (
+                    <button onClick={() => handleCloseCycle(cycle.id)} className="bg-red-500 text-white px-4 py-2 rounded text-sm hover:bg-red-600 transition">Close</button>
+                  )}
                 </div>
               </div>
             ))}

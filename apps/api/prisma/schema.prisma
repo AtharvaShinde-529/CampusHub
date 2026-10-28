@@ -36,15 +36,48 @@ enum OrgRole {
   FACULTY_GUARDIAN
 }
 
+enum EventStatus {
+  DRAFT
+  PUBLISHED
+  CANCELLED
+  COMPLETED
+}
+
+enum RecruitmentStatus {
+  OPEN
+  CLOSED
+  REVIEWING
+  COMPLETED
+}
+
+enum ApplicationStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  WITHDRAWN
+}
+
+enum OpportunityStatus {
+  PENDING_MODERATION
+  PUBLISHED
+  REJECTED
+  EXPIRED
+}
+
+enum ExchangeStatus {
+  OPEN
+  RESOLVED
+}
+
 model User {
-  id            String        @id @default(uuid())
-  email         String        @unique
-  passwordHash  String
-  globalRole    GlobalRole
-  status        AccountStatus @default(PENDING)
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-  avatarUrl     String?
+  id           String        @id @default(uuid())
+  email        String        @unique
+  passwordHash String
+  globalRole   GlobalRole
+  status       AccountStatus @default(PENDING)
+  avatarUrl    String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
 
   studentProfile     StudentProfile?
   facultyProfile     FacultyProfile?
@@ -52,51 +85,51 @@ model User {
   applications       Application[]
   registrations      EventRegistration[]
   auditLogs          AuditLog[]
+  facultyGuardianFor Organization[]      @relation("FacultyGuardian")
   notifications      Notification[]
-  sentMessages       Message[] @relation("SentMessages")
-  receivedMessages   Message[] @relation("ReceivedMessages")
+  sentMessages       Message[]           @relation("SentMessages")
+  receivedMessages   Message[]           @relation("ReceivedMessages")
   exchangeItems      ExchangeItem[]
-  facultyGuardianFor Organization[] @relation("FacultyGuardian")
 }
 
 model StudentProfile {
-  id           String   @id @default(uuid())
-  userId       String   @unique
-  firstName    String
-  lastName     String
-  rollNumber   String   @unique
-  department   String
-  interests    String[]
-  skills       String[]
-  bio          String?
-  githubUrl    String?
-  linkedinUrl  String?
-  projects     String[]
-  user         User     @relation(fields: [userId], references: [id])
+  id          String   @id @default(uuid())
+  userId      String   @unique
+  firstName   String
+  lastName    String
+  rollNumber  String   @unique
+  department  String
+  interests   String[]
+  skills      String[]
+  bio         String?
+  projects    String[]
+  githubUrl   String?
+  linkedinUrl String?
+  user        User     @relation(fields: [userId], references: [id])
 }
 
 model FacultyProfile {
-  id                    String   @id @default(uuid())
-  userId                String   @unique
-  firstName             String
-  lastName              String
-  department            String
-  designation           String
-  bio                   String?
-  user                  User     @relation(fields: [userId], references: [id])
+  id          String  @id @default(uuid())
+  userId      String  @unique
+  firstName   String
+  lastName    String
+  department  String
+  designation String
+  bio         String?
+  user        User    @relation(fields: [userId], references: [id])
 }
 
 model Organization {
-  id                String    @id @default(uuid())
-  name              String    @unique
-  description       String
-  category          String
-  status            OrgStatus @default(DRAFT)
-  createdAt         DateTime  @default(now())
-  renewalDate       DateTime  @default(now())
-  
+  id          String    @id @default(uuid())
+  name        String    @unique
+  description String
+  category    String
+  status      OrgStatus @default(DRAFT)
+  createdAt   DateTime  @default(now())
+  renewalDate DateTime  @default(now())
+
   facultyGuardianId String?
-  facultyGuardian   User?     @relation("FacultyGuardian", fields: [facultyGuardianId], references: [id])
+  facultyGuardian   User?   @relation("FacultyGuardian", fields: [facultyGuardianId], references: [id])
 
   memberships       Membership[]
   events            Event[]
@@ -119,63 +152,65 @@ model Membership {
 }
 
 model RecruitmentCycle {
-  id             String        @id @default(uuid())
+  id             String            @id @default(uuid())
   title          String
   description    String
   deadline       DateTime
-  status         String        @default("OPEN")
+  status         RecruitmentStatus @default(OPEN)
   organizationId String
-  organization   Organization  @relation(fields: [organizationId], references: [id])
-  applications   Application[]
-  createdAt      DateTime      @default(now())
+  createdAt      DateTime          @default(now())
+
+  organization Organization  @relation(fields: [organizationId], references: [id])
+  applications Application[]
 }
 
 model Application {
-  id                 String           @id @default(uuid())
+  id                 String            @id @default(uuid())
   userId             String
   recruitmentCycleId String
   pitch              String
-  status             String           @default("PENDING")
-  
-  user               User             @relation(fields: [userId], references: [id])
-  recruitmentCycle   RecruitmentCycle @relation(fields: [recruitmentCycleId], references: [id])
+  status             ApplicationStatus @default(PENDING)
+
+  user             User             @relation(fields: [userId], references: [id])
+  recruitmentCycle RecruitmentCycle @relation(fields: [recruitmentCycleId], references: [id])
 }
 
 model Event {
-  id             String   @id @default(uuid())
+  id             String              @id @default(uuid())
   title          String
   description    String
   startDate      DateTime
   endDate        DateTime
   organizationId String
-  status         String   @default("DRAFT")
-  isFest         Boolean  @default(false)
+  status         EventStatus         @default(DRAFT)
+  isFest         Boolean             @default(false)
   parentEventId  String?
   maxCapacity    Int?
-  venue          String?  
-  organization   Organization      @relation(fields: [organizationId], references: [id])
+  venue          String?
+  organization   Organization        @relation(fields: [organizationId], references: [id])
   registrations  EventRegistration[]
 }
 
 model EventRegistration {
-  id        String   @id @default(uuid())
-  userId    String
-  eventId   String
-  status    String   @default("REGISTERED")
-  user      User     @relation(fields: [userId], references: [id])
-  event     Event    @relation(fields: [eventId], references: [id])
+  id      String @id @default(uuid())
+  userId  String
+  eventId String
+  status  String @default("REGISTERED")
+  user    User   @relation(fields: [userId], references: [id])
+  event   Event  @relation(fields: [eventId], references: [id])
+
   @@unique([userId, eventId])
 }
 
 model Opportunity {
-  id          String   @id @default(uuid())
+  id          String            @id @default(uuid())
   title       String
   description String
   category    String
   deadline    DateTime
-  status      String   @default("PENDING_MODERATION")
+  status      OpportunityStatus @default(PENDING_MODERATION)
   publisherId String
-  createdAt   DateTime @default(now())
+  createdAt   DateTime          @default(now())
 }
 
 model AuditLog {
@@ -188,7 +223,6 @@ model AuditLog {
   user      User     @relation(fields: [userId], references: [id])
 }
 
-
 model Notification {
   id        String   @id @default(uuid())
   userId    String
@@ -200,26 +234,14 @@ model Notification {
 }
 
 model ExchangeItem {
-  id          String   @id @default(uuid())
+  id          String         @id @default(uuid())
   title       String
   description String
-  type        String   // "LOST", "FOUND", "SELL", "EXCHANGE"
-  status      String   @default("OPEN") // "OPEN", "RESOLVED"
+  type        String
+  status      ExchangeStatus @default(OPEN)
   userId      String
-  createdAt   DateTime @default(now())
-  user        User     @relation(fields: [userId], references: [id])
-}
-
-
-model Message {
-  id         String   @id @default(uuid())
-  content    String
-  senderId   String
-  receiverId String
-  createdAt  DateTime @default(now())
-  
-  sender     User     @relation("SentMessages", fields: [senderId], references: [id])
-  receiver   User     @relation("ReceivedMessages", fields: [receiverId], references: [id])
+  createdAt   DateTime       @default(now())
+  user        User           @relation(fields: [userId], references: [id])
 }
 
 model Announcement {
@@ -231,6 +253,13 @@ model Announcement {
   organization   Organization @relation(fields: [organizationId], references: [id])
 }
 
+model Message {
+  id         String   @id @default(uuid())
+  content    String
+  senderId   String
+  receiverId String
+  createdAt  DateTime @default(now())
 
-
-
+  sender   User @relation("SentMessages", fields: [senderId], references: [id])
+  receiver User @relation("ReceivedMessages", fields: [receiverId], references: [id])
+}

@@ -5,7 +5,8 @@ import Navbar from '../components/Navbar';
 import { Send, MessageSquare } from 'lucide-react';
 import { io } from 'socket.io-client';
 
-const socket = io('http://localhost:3000');
+const token = localStorage.getItem('token');
+const socket = io('http://localhost:3000', { auth: { token } });
 
 export default function Chat() {
   const { userId } = useParams();

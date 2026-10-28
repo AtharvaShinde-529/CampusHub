@@ -46,6 +46,12 @@ export class EventsController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @Patch(':id/cancel-event')
+  cancelEvent(@Param('id') id: string, @Req() req: any) {
+    return this.eventsService.cancelEvent(id, req.user.userId);
+  }
+
+  @UseGuards(JwtAuthGuard)
   @Get(':id/attendees')
   getAttendees(@Param('id') id: string) {
     return this.eventsService.getEventAttendees(id);
@@ -69,5 +75,6 @@ export class EventsController {
     return this.eventsService.markAttendance(regId, status);
   }
 }
+
 
 

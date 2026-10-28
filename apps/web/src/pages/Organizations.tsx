@@ -1,5 +1,6 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import { api } from '../api/axios';
 
 export default function Organizations() {
@@ -33,6 +34,7 @@ export default function Organizations() {
     setError(''); setSuccess('');
     try {
       await api.post('/organizations', { name, description, category });
+      toast.success('Organization submitted for Admin approval!');
       setSuccess('Organization submitted for Admin approval!');
       setName(''); setDescription(''); setCategory('');
     } catch (err: any) {
@@ -44,8 +46,8 @@ export default function Organizations() {
     e.preventDefault();
     try {
       await api.post(`/organizations/${id}/join`);
-      alert('Successfully joined the club!');
-    } catch (err: any) { alert(err.response?.data?.message || 'Failed to join'); }
+      toast.success('Successfully joined the club!');
+    } catch (err: any) { toast.error(err.response?.data?.message || 'Failed to join'); }
   };
 
   return (

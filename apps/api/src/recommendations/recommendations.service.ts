@@ -19,6 +19,9 @@ export class RecommendationsService {
     if (keywords.length === 0) return { clubs: [], events: [], opportunities: [] };
 
     // 2. Fetch all active data
+    const myMemberships = await this.prisma.membership.findMany({ where: { userId } });
+    const joinedOrgIds = myMemberships.map(m => m.organizationId);
+
     const [clubs, events, opportunities] = await Promise.all([
       this.prisma.organization.findMany({ where: { status: 'ACTIVE' } }),
       this.prisma.event.findMany({ where: { status: 'PUBLISHED' }, include: { organization: true } }),
@@ -33,7 +36,7 @@ export class RecommendationsService {
     };
 
     const matchedClubs = clubs.filter(c => 
-      isMatch(c.name) || isMatch(c.category) || isMatch(c.description)
+      !joinedOrgIds.includes(c.id) && (isMatch(c.name) || isMatch(c.category) || isMatch(c.description))
     ).slice(0, 3); // Top 3
 
     const matchedEvents = events.filter(e => 
@@ -47,3 +50,4 @@ export class RecommendationsService {
     return { clubs: matchedClubs, events: matchedEvents, opportunities: matchedOpps };
   }
 }
+

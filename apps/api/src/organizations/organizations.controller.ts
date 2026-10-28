@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, UseGuards, Req, Patch, Query, ForbiddenException, BadRequestException } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Body, Param, UseGuards, Req, Patch, Query, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { OrganizationsService } from './organizations.service';
 import { CreateOrganizationDto } from './dto/create-organization.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -61,6 +61,12 @@ export class OrganizationsController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @Delete(':id/leave')
+  leaveClub(@Param('id') id: string, @Req() req: any) {
+    return this.organizationsService.leaveClub(id, req.user.userId);
+  }
+
+  @UseGuards(JwtAuthGuard)
   @Get('my')
   getMyOrgs(@Req() req: any) {
     return this.organizationsService.findMyMemberships(req.user.userId);
@@ -107,6 +113,12 @@ export class OrganizationsController {
     // FLAW 6 FIX: Verify requester is CLUB_HEAD of this specific organization
     const targetMembership = await this.prisma.membership.findUnique({ where: { id: memberId } });
     if (!targetMembership) throw new BadRequestException('Membership not found');
+    
+    // BUG 4 FIX: Prevent self-role change
+    if (targetMembership.userId === req.user.userId) {
+      throw new ForbiddenException('You cannot change your own role.');
+    }
+    if (!targetMembership) throw new BadRequestException('Membership not found');
 
     const requester = await this.prisma.membership.findUnique({
       where: { userId_organizationId: { userId: req.user.userId, organizationId: targetMembership.organizationId } }
@@ -119,4 +131,6 @@ export class OrganizationsController {
     return this.prisma.membership.update({ where: { id: memberId }, data: { role: role } });
   }
 }
+
+
 

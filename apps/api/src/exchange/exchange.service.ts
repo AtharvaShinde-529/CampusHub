@@ -1,5 +1,6 @@
 import { Injectable, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { ExchangeStatus } from '@prisma/client';
 
 @Injectable()
 export class ExchangeService {
@@ -23,7 +24,6 @@ export class ExchangeService {
   }
 
   async updateStatus(id: string, status: string, userId: string) {
-    // FLAW FIX: Only the creator can update the status
     const item = await this.prisma.exchangeItem.findUnique({ where: { id } });
     if (!item) throw new NotFoundException('Item not found');
     if (item.userId !== userId) {
@@ -32,7 +32,7 @@ export class ExchangeService {
 
     return this.prisma.exchangeItem.update({
       where: { id },
-      data: { status },
+      data: { status: status as ExchangeStatus },
     });
   }
 }

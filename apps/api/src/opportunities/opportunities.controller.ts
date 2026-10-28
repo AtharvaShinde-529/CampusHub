@@ -28,6 +28,14 @@ export class OpportunitiesController {
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN')
+  @Patch(':id/reject')
+  reject(@Param('id') id: string) {
+    return this.opportunitiesService.reject(id);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
   @Patch(':id/approve')
   approve(@Param('id') id: string) { return this.opportunitiesService.approve(id); }
 }
+

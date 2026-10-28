@@ -1,9 +1,10 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { api } from '../api/axios';
 import Navbar from '../components/Navbar';
 import { Search, Calendar as CalendarIcon, Tag, Users, CheckCircle, X, AlertTriangle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import toast from 'react-hot-toast';
 
 export default function Events() {
   const [events, setEvents] = useState<any[]>([]);
@@ -69,7 +70,7 @@ export default function Events() {
         maxCapacity: maxCapacity ? Number(maxCapacity) : undefined,
         venue: venue || undefined
       });
-      alert('Event created!');
+      toast.success('Event created successfully!');
       setTitle(''); setDescription(''); setIsFest(false); setParentEventId(''); setMaxCapacity(''); setVenue('');
       fetchEvents();
     } catch (err: any) { alert(err.response?.data?.message || 'Failed to create event'); }
@@ -79,10 +80,10 @@ export default function Events() {
     e.preventDefault(); // Prevent navigating to details when clicking register
     try {
       const res = await api.post(`/events/${id}/register`);
-      alert(res.data.status === 'WAITLISTED' ? 'Event is full. You have been added to the waitlist.' : 'Registered successfully!');
+      res.data.status === 'WAITLISTED' ? toast.success('Added to waitlist!') : toast.success('Registered successfully!');
       fetchMyRegistrations();
       fetchEvents();
-    } catch (err: any) { alert(err.response?.data?.message || 'Failed to register'); }
+    } catch (err: any) { toast.error(err.response?.data?.message || 'Failed to register'); }
   };
 
   const handleCancel = async (e: React.MouseEvent, id: string) => {
@@ -90,10 +91,20 @@ export default function Events() {
     if (!confirm('Are you sure you want to cancel your registration?')) return;
     try {
       await api.delete(`/events/${id}/cancel`);
-      alert('Registration cancelled.');
+      toast.success('Registration cancelled.');
       fetchMyRegistrations();
       fetchEvents();
     } catch (err: any) { alert(err.response?.data?.message || 'Failed to cancel'); }
+  };
+
+  const handleCancelEvent = async (e: React.MouseEvent, event: any) => {
+    e.preventDefault();
+    if (!confirm('Cancel this event? All registrants will lose their spot.')) return;
+    try {
+      await api.patch(/events//cancel-event);
+      alert('Event cancelled.');
+      fetchEvents();
+    } catch (err) { alert('Failed to cancel event'); }
   };
 
   const loadAttendees = async (e: React.MouseEvent, event: any) => {
@@ -112,7 +123,7 @@ export default function Events() {
       await api.patch(`/events/attendees/${regId}`, { status: newStatus });
       const res = await api.get(`/events/${selectedEvent.id}/attendees`);
       setAttendees(res.data);
-    } catch (err) { alert('Failed to update status'); }
+    } catch (err) { toast.error('Failed to update status'); }
   };
 
   const isManager = (orgId: string) => myClubs.some(c => c.organization.id === orgId);
@@ -211,7 +222,7 @@ export default function Events() {
                     <div className="flex items-center gap-2 text-xs font-bold px-2 py-1 rounded bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
                       <Tag size={12} /> {event.organization?.name}
                     </div>
-                    {event.isFest && <span className="text-xs font-bold px-2 py-1 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-400">🎪 Major Fest</span>}
+                    {event.isFest && <span className="text-xs font-bold px-2 py-1 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-400">?? Major Fest</span>}
                   </div>
                   <Link to={`/events/${event.id}`} className="block">
                     <h3 className="font-extrabold text-xl text-slate-900 dark:text-white hover:text-brand-600 dark:hover:text-brand-400 transition-colors mb-2">{event.title}</h3>
@@ -231,9 +242,14 @@ export default function Events() {
                   </div>
                   
                   {isManager(event.organizationId) ? (
-                    <button onClick={(e) => loadAttendees(e, event)} className="w-full md:w-auto bg-slate-800 text-white px-5 py-2 rounded-xl font-bold hover:bg-slate-700 transition shadow-sm text-sm flex items-center justify-center gap-2">
-                      <Users size={16}/> Attendees
-                    </button>
+                    <div className="flex gap-2 w-full md:w-auto">
+                      <button onClick={(e) => loadAttendees(e, event)} className="flex-1 md:flex-none bg-slate-800 text-white px-5 py-2 rounded-xl font-bold hover:bg-slate-700 transition shadow-sm text-sm flex items-center justify-center gap-2">
+                        <Users size={16}/> Attendees
+                      </button>
+                      <button onClick={(e) => handleCancelEvent(e, event)} className="flex-1 md:flex-none bg-red-100 text-red-600 px-5 py-2 rounded-xl font-bold hover:bg-red-200 transition shadow-sm text-sm">
+                        Cancel
+                      </button>
+                    </div>
                   ) : user.role === 'STUDENT' ? (
                     myReg ? (
                       <div className="flex items-center gap-2 w-full md:w-auto">
@@ -309,3 +325,4 @@ export default function Events() {
     </div>
   );
 }
+

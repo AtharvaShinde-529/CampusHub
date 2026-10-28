@@ -15,7 +15,14 @@ export class NotificationsService {
     return this.prisma.notification.findMany({
       where: { userId },
       orderBy: { createdAt: 'desc' },
-      take: 10
+      take: 50 // BUG 5 FIX: Increased limit
+    });
+  }
+
+  async markAllAsRead(userId: string) {
+    return this.prisma.notification.updateMany({
+      where: { userId, isRead: false },
+      data: { isRead: true }
     });
   }
 
@@ -26,4 +33,5 @@ export class NotificationsService {
     });
   }
 }
+
 

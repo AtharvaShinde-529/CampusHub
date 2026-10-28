@@ -1,6 +1,7 @@
 import { Controller, Get, Post, Body, Param, UseGuards, Req, Patch, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { ApplicationStatus } from '@prisma/client';
 
 @Controller('recruitment')
 export class RecruitmentController {
@@ -39,6 +40,10 @@ export class RecruitmentController {
     const cycle = await this.prisma.recruitmentCycle.findUnique({ where: { id } });
     if (!cycle) throw new BadRequestException('Cycle not found');
 
+    if (cycle.status !== 'OPEN') {
+      throw new BadRequestException('This recruitment cycle is closed.');
+    }
+
     if (new Date(cycle.deadline) < new Date()) {
       throw new BadRequestException('The deadline for this recruitment has passed.');
     }
@@ -58,7 +63,18 @@ export class RecruitmentController {
 
   @UseGuards(JwtAuthGuard)
   @Get(':id/applications')
-  getApplications(@Param('id') id: string) {
+  async getApplications(@Param('id') id: string, @Req() req: any) {
+    const cycle = await this.prisma.recruitmentCycle.findUnique({ where: { id } });
+    if (!cycle) throw new BadRequestException('Cycle not found');
+
+    const membership = await this.prisma.membership.findUnique({
+      where: { userId_organizationId: { userId: req.user.userId, organizationId: cycle.organizationId } }
+    });
+
+    if (!membership || membership.role !== 'CLUB_HEAD') {
+      throw new ForbiddenException('Only the Club Head can view applications for this cycle.');
+    }
+
     return this.prisma.application.findMany({
       where: { recruitmentCycleId: id },
       include: { user: { include: { studentProfile: true } } }
@@ -66,15 +82,37 @@ export class RecruitmentController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @Patch(':id/close')
+  async closeCycle(@Param('id') id: string, @Req() req: any) {
+    const cycle = await this.prisma.recruitmentCycle.findUnique({ where: { id } });
+    if (!cycle) throw new BadRequestException('Cycle not found');
+    
+    const membership = await this.prisma.membership.findUnique({
+      where: { userId_organizationId: { userId: req.user.userId, organizationId: cycle.organizationId } }
+    });
+    if (!membership || membership.role !== 'CLUB_HEAD') {
+      throw new ForbiddenException('Only the Club Head can close this cycle.');
+    }
+
+    return this.prisma.recruitmentCycle.update({
+      where: { id },
+      data: { status: 'CLOSED' }
+    });
+  }
+
+  @UseGuards(JwtAuthGuard)
   @Patch('applications/:id')
   async updateAppStatus(@Param('id') id: string, @Body('status') status: string, @Req() req: any) {
+    if (!['ACCEPTED', 'REJECTED'].includes(status)) {
+      throw new BadRequestException('Status must be ACCEPTED or REJECTED.');
+    }
+
     const app = await this.prisma.application.findUnique({
       where: { id },
       include: { recruitmentCycle: true }
     });
     if (!app) throw new BadRequestException('Application not found');
 
-    // FLAW 7 FIX: Verify requester is CLUB_HEAD of the organization
     const requester = await this.prisma.membership.findUnique({
       where: { userId_organizationId: { userId: req.user.userId, organizationId: app.recruitmentCycle.organizationId } }
     });
@@ -82,9 +120,11 @@ export class RecruitmentController {
       throw new ForbiddenException('Only the Club Head can update application statuses.');
     }
 
-    const updatedApp = await this.prisma.application.update({ where: { id }, data: { status } });
+    const updatedApp = await this.prisma.application.update({ 
+      where: { id }, 
+      data: { status: status as ApplicationStatus } 
+    });
 
-    // FLAW 1 FIX: If ACCEPTED, create a Membership
     if (status === 'ACCEPTED') {
       const existingMembership = await this.prisma.membership.findUnique({
         where: { userId_organizationId: { userId: app.userId, organizationId: app.recruitmentCycle.organizationId } }

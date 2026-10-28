@@ -55,8 +55,10 @@ export class OrganizationsService {
   async renew(id: string) {
     const org = await this.prisma.organization.findUnique({ where: { id } });
     if (!org) throw new NotFoundException('Organization not found');
-    const newRenewalDate = new Date(org.renewalDate);
-    newRenewalDate.setFullYear(newRenewalDate.getFullYear() + 1);
+    // DESIGN 1 FIX: Base from today if expired, otherwise extend from current date
+    const baseDate = org.renewalDate > new Date() ? org.renewalDate : new Date();
+    const newRenewalDate = new Date(baseDate);
+    newRenewalDate.setFullYear(baseDate.getFullYear() + 1);
     return this.prisma.organization.update({ where: { id }, data: { renewalDate: newRenewalDate } });
   }
 
@@ -71,6 +73,16 @@ export class OrganizationsService {
     });
     if (existing) throw new ConflictException('Already a member');
     return this.prisma.membership.create({ data: { userId, organizationId: orgId, role: 'MEMBER' } });
+  }
+
+  async leaveClub(orgId: string, userId: string) {
+    const membership = await this.prisma.membership.findUnique({
+      where: { userId_organizationId: { userId, organizationId: orgId } }
+    });
+    if (!membership) throw new NotFoundException('Membership not found');
+    if (membership.role === 'CLUB_HEAD') throw new ForbiddenException('Club Heads cannot leave. Transfer ownership first.');
+    
+    return this.prisma.membership.delete({ where: { id: membership.id } });
   }
 
   async findMyMemberships(userId: string) {
@@ -112,4 +124,6 @@ export class OrganizationsService {
     });
   }
 }
+
+
 

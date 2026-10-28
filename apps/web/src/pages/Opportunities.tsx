@@ -53,6 +53,14 @@ export default function Opportunities() {
     }
   };
 
+  const handleReject = async (id: string) => {
+    if (!confirm('Reject this opportunity?')) return;
+    try {
+      await api.patch(/opportunities//reject);
+      fetchPending();
+    } catch (err) { alert('Failed to reject'); }
+  };
+
   const handleApprove = async (id: string) => {
     try {
       await api.patch(`/opportunities/${id}/approve`);
@@ -100,7 +108,10 @@ export default function Opportunities() {
                     <h3 className="font-bold text-lg">{opp.title}</h3>
                     <p className="text-sm text-gray-600">{opp.description}</p>
                   </div>
-                  <button onClick={() => handleApprove(opp.id)} className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Approve</button>
+                  <div className="flex gap-2">
+                    <button onClick={() => handleApprove(opp.id)} className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Approve</button>
+                    <button onClick={() => handleReject(opp.id)} className="bg-red-100 text-red-600 px-4 py-2 rounded hover:bg-red-200">Reject</button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -138,3 +149,4 @@ export default function Opportunities() {
     </div>
   );
 }
+

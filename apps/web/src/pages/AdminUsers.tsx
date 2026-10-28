@@ -1,4 +1,5 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import { ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api/axios';
 import Navbar from '../components/Navbar';
@@ -59,7 +60,8 @@ export default function AdminUsers() {
       <div className="max-w-5xl mx-auto p-6 mt-4">
         <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl p-8 rounded-3xl shadow-sm border border-white/40 dark:border-slate-700">
           
-          <div className="flex justify-between items-center mb-8">
+          <button onClick={() => navigate('/admin')} className="flex items-center gap-2 text-slate-500 hover:text-brand-600 dark:text-slate-400 mb-6 font-bold transition"><ArrowLeft size={20} /> Back to Admin Panel</button>
+        <div className="flex justify-between items-center mb-8">
             <h1 className="text-3xl font-extrabold text-slate-800 dark:text-white">User Management</h1>
             <div className="flex gap-3 no-print">
               <button onClick={handlePrint} className="flex items-center gap-2 bg-slate-800 text-white px-4 py-2 rounded-xl font-bold hover:bg-slate-700 transition">

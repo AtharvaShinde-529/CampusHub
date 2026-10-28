@@ -1,9 +1,10 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { api } from '../api/axios';
 import Navbar from '../components/Navbar';
 import { MessageSquare, Megaphone, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import toast from 'react-hot-toast';
 
 export default function ClubManagement() {
   const { id } = useParams();
@@ -42,11 +43,11 @@ export default function ClubManagement() {
     setSending(true);
     try {
       await api.post('/announcements', { title, content, organizationId: id });
-      alert('Announcement sent to all members!');
+      toast.success('Announcement sent to all members!');
       setTitle(''); setContent(''); setShowModal(false);
       fetchAnnouncements();
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to send announcement');
+      toast.error(err.response?.data?.message || 'Failed to send announcement');
     } finally {
       setSending(false);
     }

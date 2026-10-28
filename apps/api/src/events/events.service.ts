@@ -9,7 +9,7 @@ export class EventsService {
   async findAll(search?: string, isFest?: boolean) {
     return this.prisma.event.findMany({
       where: { 
-        status: 'PUBLISHED',
+        status: 'PUBLISHED', // Cancelled events won't show
         ...(search && { title: { contains: search, mode: 'insensitive' } }),
         ...(isFest !== undefined && { isFest: isFest }),
       },
@@ -116,6 +116,23 @@ export class EventsService {
     });
   }
 
+  async cancelEvent(id: string, userId: string) {
+    const event = await this.prisma.event.findUnique({ where: { id } });
+    if (!event) throw new NotFoundException('Event not found');
+
+    const membership = await this.prisma.membership.findUnique({
+      where: { userId_organizationId: { userId, organizationId: event.organizationId } }
+    });
+    if (!membership || (membership.role !== 'CLUB_HEAD' && membership.role !== 'COMMITTEE_MEMBER')) {
+      throw new ForbiddenException('Only organizers can cancel events.');
+    }
+
+    return this.prisma.event.update({
+      where: { id },
+      data: { status: 'CANCELLED' }
+    });
+  }
+
   async getEventById(id: string) {
     return this.prisma.event.findUnique({
       where: { id },
@@ -135,4 +152,5 @@ export class EventsService {
     });
   }
 }
+
 

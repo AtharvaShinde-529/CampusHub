@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { api } from '../api/axios';
 import Navbar from '../components/Navbar';
@@ -29,6 +29,15 @@ export default function ClubDetail() {
       setMyMembership(myClubsRes.data.find((m: any) => m.organizationId === id));
     } catch (err) { console.error(err); }
     setLoading(false);
+  };
+
+  const handleLeave = async () => {
+    if (!confirm('Are you sure you want to leave this club?')) return;
+    try {
+      await api.delete(/organizations//leave);
+      alert('You have left the club.');
+      loadData();
+    } catch (err: any) { alert(err.response?.data?.message || 'Failed to leave'); }
   };
 
   const handleJoin = async () => {
@@ -89,8 +98,8 @@ export default function ClubDetail() {
                           <h3 className="font-bold text-lg text-slate-800 dark:text-white">{event.title}</h3>
                           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 line-clamp-1">{event.description}</p>
                           <div className="flex gap-4 mt-2 text-xs font-bold text-slate-500 dark:text-slate-400">
-                            <span>📅 {new Date(event.startDate).toLocaleDateString('en-IN')}</span>
-                            {event.venue && <span>📍 {event.venue}</span>}
+                            <span>?? {new Date(event.startDate).toLocaleDateString('en-IN')}</span>
+                            {event.venue && <span>?? {event.venue}</span>}
                           </div>
                         </div>
                         {event.isFest && <span className="text-xs font-bold bg-amber-100 text-amber-700 px-2 py-1 rounded">FEST</span>}
@@ -149,6 +158,9 @@ export default function ClubDetail() {
                     <CheckCircle className="mx-auto text-green-600 mb-2" size={32} />
                     <p className="font-bold text-green-700 dark:text-green-400">You are a {myMembership.role.replace('_', ' ')}</p>
                   </div>
+                  {myMembership.role !== 'CLUB_HEAD' && (
+                    <button onClick={handleLeave} className="w-full bg-red-100 text-red-600 py-3 rounded-xl font-bold hover:bg-red-200 transition">Leave Club</button>
+                  )}
                   {myMembership.role === 'CLUB_HEAD' && (
                     <Link to={`/organizations/${id}/manage`} className="block w-full bg-slate-800 text-white py-3 rounded-xl font-bold hover:bg-slate-700 transition text-center">
                       Manage Club

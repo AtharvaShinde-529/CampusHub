@@ -9,13 +9,13 @@ export class FeedService {
     // Fetch top 5 events, opportunities, and clubs
     const [events, opportunities, clubs] = await Promise.all([
       this.prisma.event.findMany({
-        where: { status: 'PUBLISHED' },
+        where: { status: 'PUBLISHED', startDate: { gte: new Date() } },
         take: 5,
         orderBy: { startDate: 'asc' },
         include: { organization: true },
       }),
       this.prisma.opportunity.findMany({
-        where: { status: 'PUBLISHED' },
+        where: { status: 'PUBLISHED', startDate: { gte: new Date() } },
         take: 5,
         orderBy: { deadline: 'asc' },
       }),
@@ -29,3 +29,4 @@ export class FeedService {
     return { events, opportunities, clubs };
   }
 }
+

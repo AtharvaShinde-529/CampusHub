@@ -128,7 +128,7 @@ export class UsersController {
     await this.prisma.message.deleteMany({ where: { OR: [{ senderId: userId }, { receiverId: userId }] } });
     await this.prisma.notification.deleteMany({ where: { userId } });
     await this.prisma.exchangeItem.deleteMany({ where: { userId } });
-    await this.prisma.announcement.deleteMany({ where: { organization: { memberships: { some: { userId, role: 'CLUB_HEAD' } } } } });
+    // BUG 6 FIX: Do NOT delete announcements on user deletion (Organizational history)
     await this.prisma.studentProfile.deleteMany({ where: { userId } });
     await this.prisma.facultyProfile.deleteMany({ where: { userId } });
     await this.prisma.user.delete({ where: { id: userId } });
@@ -162,3 +162,4 @@ export class UsersController {
     return this.prisma.user.findMany({ where: { globalRole: 'FACULTY' }, include: { facultyProfile: true } });
   }
 }
+

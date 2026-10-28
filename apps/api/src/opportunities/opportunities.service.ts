@@ -28,8 +28,13 @@ export class OpportunitiesService {
     });
   }
 
+  async reject(id: string) {
+    return this.prisma.opportunity.update({ where: { id }, data: { status: 'REJECTED' } });
+  }
+
   async approve(id: string) {
     return this.prisma.opportunity.update({ where: { id }, data: { status: 'PUBLISHED' } });
   }
 }
+
 
